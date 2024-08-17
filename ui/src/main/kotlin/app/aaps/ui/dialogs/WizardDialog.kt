@@ -48,6 +48,7 @@ import app.aaps.core.objects.extensions.round
 import app.aaps.core.objects.extensions.valueToUnits
 import app.aaps.core.objects.profile.ProfileSealed
 import app.aaps.core.objects.wizard.BolusWizard
+import app.aaps.core.ui.UIRunnable
 import app.aaps.core.ui.extensions.runOnUiThread
 import app.aaps.core.ui.extensions.toVisibility
 import app.aaps.core.ui.toast.ToastUtils
@@ -224,8 +225,13 @@ class WizardDialog : DaggerDialogFragment() {
             } else {
                 okClicked = true
                 calculateInsulin()
-                context?.let { context ->
-                    wizard?.confirmAndExecute(context)
+                activity?.let { activity ->
+                    protectionCheck.queryProtection(
+                        activity,
+                        ProtectionCheck.Protection.PREFERENCES,
+                        UIRunnable { if (isAdded) context?.let { context ->
+                            wizard?.confirmAndExecute(context)
+                        } })
                 }
                 aapsLogger.debug(LTag.APS, "Dialog ok pressed: ${this.javaClass.simpleName}")
             }
