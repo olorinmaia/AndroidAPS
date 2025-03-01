@@ -170,7 +170,7 @@
     <string name="until">inntil</string>
     <string name="default_range">STANDARD OMRÅDE</string>
     <string name="target">målverdi</string>
-    <string name="rate_duration">Tilførsel: %1$.2fE/t (%2$.2f%%) \nVarighet %3$d min</string>
+    <string name="rate_duration">Basaldose: %1$.2f E/t\nVarighet: %2$d min\nSMB: %3$.2f E</string>
     <string name="no_profile">Ingen profil valgt</string>
     <string name="aps_only">Bare bruk i APS-modus!</string>
     <string name="last_aps_result_na">Siste resultat ikke tilgjengelig!</string>

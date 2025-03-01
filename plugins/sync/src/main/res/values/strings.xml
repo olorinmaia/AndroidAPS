@@ -207,7 +207,7 @@
     <string name="until">until</string>
     <string name="default_range">DEFAULT RANGE</string>
     <string name="target">target</string>
-    <string name="rate_duration">Rate: %1$.2fU/h (%2$.2f%%) \nDuration %3$d min</string>
+    <string name="rate_duration">Rate: %1$.2f U/h\nDuration %2$d min\nSMB: %3$.2f U</string>
     <string name="no_profile">No profile loaded</string>
     <string name="aps_only">Only apply in APS mode!</string>
     <string name="last_aps_result_na">Last result not available!</string>
