@@ -198,7 +198,7 @@ class DataHandlerMobile @Inject constructor(
                                EventMobileToWear(
                                    EventData.ConfirmAction(
                                        rh.gs(R.string.loop_status).uppercase(),
-                                       "$targetsStatus\n\n$loopStatus\n\n$oAPSResultStatus",
+                                       "$oAPSResultStatus\n\n$loopStatus\n\n$targetsStatus\n\n",
                                        returnCommand = null
                                    )
                                )
@@ -1541,7 +1541,11 @@ class DataHandlerMobile @Inject constructor(
             } else if (result.rate == 0.0 && result.duration == 0) {
                 rh.gs(app.aaps.core.ui.R.string.cancel_temp) + "\n"
             } else {
-                rh.gs(R.string.rate_duration, result.rate, result.rate / activePlugin.activePump.baseBasalRate * 100, result.duration) + "\n"
+                rh.gs(R.string.rate_duration, result.rate, result.duration, result.smb) + "\n"
+            }
+            val lastRun = loop.lastRun
+            if (lastRun != null) {
+                if (lastRun.lastTBREnact != 0L) ret += rh.gs(R.string.last_enact) + ": " + dateUtil.timeString(lastRun.lastTBREnact) + "\n"
             }
             ret += "\n" + rh.gs(app.aaps.core.ui.R.string.reason) + ": " + result.reason
             return ret
