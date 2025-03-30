@@ -277,7 +277,7 @@ class ConfigBuilderPlugin @Inject constructor(
             expandAnimation?.start()
         layout.categoryExpandLess.setOnClickListener {
             layout.categoryExpandLess.visibility = false.toVisibility()
-            layout.categoryExpandMore.visibility = true.toVisibility()
+            layout.categoryExpandMore.visibility = (plugins.size > 1).toVisibility()
             pluginsAdded.forEach { pluginViewHolder ->
                 pluginViewHolder.layout.root.visibility = pluginViewHolder.plugin.isEnabled().toVisibility()
             }
