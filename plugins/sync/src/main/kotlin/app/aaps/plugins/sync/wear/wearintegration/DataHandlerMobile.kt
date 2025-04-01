@@ -1550,7 +1550,10 @@ class DataHandlerMobile @Inject constructor(
             } else if (result.rate == 0.0 && result.duration == 0) {
                 rh.gs(app.aaps.core.ui.R.string.cancel_temp) + "\n"
             } else {
-                rh.gs(R.string.rate_duration, result.rate, result.duration, result.smb) + "\n"
+                val profile = profileFunction.getProfile()
+                rh.gs(R.string.rate_duration,
+                      processedTbrEbData.getTempBasalIncludingConvertedExtended(System.currentTimeMillis())?.toStringShort(rh) ?: profile?.let { rh.gs(app.aaps.core.ui.R.string.pump_base_basal_rate, it.getBasal()) },
+                      result.smb) + "\n"
             }
             val lastRun = loop.lastRun
             if (lastRun != null) {
