@@ -184,8 +184,33 @@ class CarbsDialog : DialogFragmentWithDate() {
         }
 
         iobCobCalculator.ads.actualBg()?.let { bgReading ->
-            if (bgReading.recalculated < 72)
-                binding.hypoTt.isChecked = true
+
+            if (bgReading.recalculated < 72) {
+
+                val activeTT = persistenceLayer.getTemporaryTargetActiveAt(dateUtil.now())
+                val hypoTTDuration = preferences.get(IntKey.OverviewHypoDuration)
+
+                var shouldAutoCheckHypo = true
+
+                if (activeTT != null) {
+
+                    val activeTarget = activeTT.highTarget
+                    val now = System.currentTimeMillis()
+                    val remainingDurationMin =
+                        ((activeTT.timestamp + activeTT.duration) - now) / 60000
+
+                    // Prevent auto-checking HypoTT when:
+                    // 1. Active TT target is above 100 mg/dL
+                    // 2. Active TT lasts longer than the hypoTT preset
+                    if (activeTarget > 100 && remainingDurationMin > hypoTTDuration) {
+                        shouldAutoCheckHypo = false
+                    }
+                }
+
+                if (shouldAutoCheckHypo) {
+                    binding.hypoTt.isChecked = true
+                }
+            }
         }
         binding.hypoTt.setOnClickListener {
             binding.activityTt.isChecked = false
@@ -350,12 +375,12 @@ class CarbsDialog : DialogFragmentWithDate() {
                         uel.log(
                             action = if (duration == 0) Action.CARBS else Action.EXTENDED_CARBS, source = Sources.CarbDialog,
                             note = notes,
-                            listValues = listOf(
+                            listValues = listOfNotNull(
                                 ValueWithUnit.Timestamp(eventTime).takeIf { eventTimeChanged },
                                 ValueWithUnit.Gram(carbsAfterConstraints),
                                 ValueWithUnit.Minute(timeOffset).takeIf { timeOffset != 0 },
                                 ValueWithUnit.Hour(duration).takeIf { duration != 0 }
-                            ).filterNotNull()
+                            )
                         )
                         commandQueue.bolus(detailedBolusInfo, object : Callback() {
                             override fun run() {
