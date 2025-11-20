@@ -7,6 +7,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.model.TT
@@ -200,9 +201,9 @@ class CarbsDialog : DialogFragmentWithDate() {
                         ((activeTT.timestamp + activeTT.duration) - now) / 60000
 
                     // Prevent auto-checking HypoTT when:
-                    // 1. Active TT target is above 100 mg/dL
+                    // 1. Active TT target is above Constants.ALLOW_SMB_WITH_HIGH_TT
                     // 2. Active TT lasts longer than the hypoTT preset
-                    if (activeTarget > 100 && remainingDurationMin > hypoTTDuration) {
+                    if (activeTarget > Constants.ALLOW_SMB_WITH_HIGH_TT && remainingDurationMin > hypoTTDuration) {
                         shouldAutoCheckHypo = false
                     }
                 }
