@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.wear.widget.BoxInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="5dp"
+    app:boxedEdges="all">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/confirm"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/confirm_total_insulin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3.25 U"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="@color/colorInsulinButton"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:id="@+id/confirm_carbs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="45g carbs"
+            android:textSize="13sp"
+            android:textColor="@color/carbs"
+            android:layout_marginBottom="20dp" />
+
+        <ImageView
+            android:id="@+id/confirm_button"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/ic_confirm"
+            app:tint="#66BB6A"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/confirm" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/wizard_swipe_back_cancel"
+            android:textSize="10sp"
+            android:textColor="#90A4AE"
+            android:gravity="center" />
+    </LinearLayout>
+
+</androidx.wear.widget.BoxInsetLayout>

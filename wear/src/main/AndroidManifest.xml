@@ -588,6 +588,14 @@
             android:exported="true"
             android:label="@string/menu_wizard" />
         <activity
+            android:name=".interaction.actions.WizardResultActivity"
+            android:exported="false"
+            android:theme="@style/WearAppCompatDark" />
+        <activity
+            android:name="androidx.wear.activity.ConfirmationActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault" />
+        <activity
             android:name=".interaction.menus.FillMenuActivity"
             android:exported="true"
             android:label="@string/menu_prime_fill" />
