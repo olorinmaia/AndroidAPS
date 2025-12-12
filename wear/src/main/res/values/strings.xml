@@ -293,4 +293,13 @@
     <string name="key_loop_states_data" translatable="false">loop_states</string>
     <string name="label_loop_state_title">AAPS(Loop state)</string>
     <string name="action_loop_state_selected">Loop state requested</string>
+    <string name="wizard_total_insulin">Total Insulin</string>
+    <string name="wizard_calculation">Calculation</string>
+    <string name="wizard_carbs_format">%d g carbs</string>
+    <string name="wizard_settings_format">IC: %s | ISF: %s</string>
+    <string name="wizard_percentage_label">Percentage</string>
+    <string name="wizard_bolus_delivered">Bolus delivered</string>
+    <string name="wizard_success">Success</string>
+    <string name="wizard_swipe_to_confirm">Swipe to confirm</string>
+    <string name="wizard_swipe_back_cancel">Swipe back to cancel</string>
 </resources>

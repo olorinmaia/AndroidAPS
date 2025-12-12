@@ -189,4 +189,27 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
 
+    <!-- Wizard Result Colors - Improved Contrast -->
+
+    <!-- Green for adding insulin - brighter for better visibility -->
+    <color name="insulin_positive">#66BB6A</color>
+
+    <!-- Red/Orange for subtracting insulin - softer red for readability -->
+    <color name="insulin_negative">#EF5350</color>
+
+    <!-- Button colors -->
+    <color name="button_cancel_red">#EF5350</color>
+    <color name="button_confirm_green">#66BB6A</color>
+
+    <!-- Primary dark background - darker blue for better text contrast -->
+    <color name="primary_dark">#0D47A1</color>
+
+    <!-- Background dark -->
+    <color name="background_dark">#263238</color>
+
+    <!-- Secondary text - lighter for better contrast on dark backgrounds -->
+    <color name="secondary_text">#B0BEC5</color>
+
+    <!-- Divider -->
+    <color name="divider">#37474F</color>
 </resources>

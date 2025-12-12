@@ -1,5 +1,6 @@
 package app.aaps.wear.comm
 
+import app.aaps.wear.interaction.actions.WizardResultActivity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -29,6 +30,7 @@ import app.aaps.wear.R
 import app.aaps.wear.interaction.WatchfaceConfigurationActivity
 import app.aaps.wear.interaction.actions.AcceptActivity
 import app.aaps.wear.interaction.actions.ProfileSwitchActivity
+import app.aaps.wear.interaction.actions.WizardConfirmActivity
 import app.aaps.wear.interaction.utils.Persistence
 import app.aaps.wear.tile.ActionsTileService
 import app.aaps.wear.tile.LoopStateTileService
@@ -81,6 +83,55 @@ class DataHandlerWear @Inject constructor(
                         }
                     )
                 })
+            }
+// In DataHandlerWear.kt, in the setupBus() method
+// Replace your existing ActionWizardResult handler with this:
+
+        disposable += rxBus
+            .toObservable(EventData.ActionWizardResult::class.java)
+            .observeOn(aapsSchedulers.io)
+            .subscribe { event ->
+                aapsLogger.debug(LTag.WEAR, "ActionWizardResult received from ${event.sourceNodeId}")
+
+                try {
+                    // Create intent for the confirmation screen (second screen - hidden initially)
+                    val confirmIntent = Intent(context, WizardConfirmActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        putExtra("timestamp", event.timestamp)
+                        putExtra("total_insulin", event.totalInsulin)
+                        putExtra("carbs", event.carbs)
+                    }
+
+                    // Create intent for the result screen (first screen - shown to user)
+                    val resultIntent = Intent(context, WizardResultActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        putExtra("timestamp", event.timestamp)
+                        putExtra("total_insulin", event.totalInsulin)
+                        putExtra("carbs", event.carbs)
+                        putExtra("ic", event.ic)
+                        putExtra("sens", event.sens)
+                        putExtra("insulin_carbs", event.insulinFromCarbs)
+                        putExtra("insulin_bg", event.insulinFromBG ?: Double.NaN)
+                        putExtra("insulin_cob", event.insulinFromCOB ?: Double.NaN)
+                        putExtra("insulin_bolus_iob", event.insulinFromBolusIOB ?: Double.NaN)
+                        putExtra("insulin_basal_iob", event.insulinFromBasalIOB ?: Double.NaN)
+                        putExtra("insulin_trend", event.insulinFromTrend ?: Double.NaN)
+                        putExtra("insulin_superbolus", event.insulinFromSuperBolus ?: Double.NaN)
+                        putExtra("temp_target", event.tempTarget ?: "")
+                        putExtra("percentage", event.percentageCorrection ?: 100)
+                        putExtra("total_before_percentage", event.totalBeforePercentage ?: Double.NaN)
+                        putExtra("cob", event.cob)
+                    }
+
+                    // Start activities: confirmIntent FIRST (bottom of stack), then resultIntent (top)
+                    // This creates stack: [ConfirmActivity] <- [ResultActivity (visible)]
+                    // Swiping left from ResultActivity reveals ConfirmActivity
+                    context.startActivities(arrayOf(confirmIntent, resultIntent))
+
+                    aapsLogger.debug(LTag.WEAR, "WizardResultActivity started successfully")
+                } catch (e: Exception) {
+                    aapsLogger.error(LTag.WEAR, "Error starting WizardResultActivity", e)
+                }
             }
         disposable += rxBus
             .toObservable(EventData.CancelNotification::class.java)

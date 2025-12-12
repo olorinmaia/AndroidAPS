@@ -1,16 +1,42 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:height="48dp"
     android:width="48dp"
-    android:viewportHeight="30"
-    android:viewportWidth="30">
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Background circle - fills entire canvas -->
     <path
-        android:pathData="M 15 0 c -8 0 -15 7 -15 15 c 0 8 7 15 15 15 s 15 -7 15 -15 C 30 7 23 0 15 0"
+        android:pathData="M24,0 C10.75,0 0,10.75 0,24 C0,37.25 10.75,48 24,48 C37.25,48 48,37.25 48,24 C48,10.75 37.25,0 24,0Z"
         android:fillColor="@color/colorCalculatorButton"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 20.625 18.345 h -4.083 c -0.063 0 -0.113 0.051 -0.113 0.113 v 1.292 c 0 0.063 0.051 0.113 0.113 0.113 h 4.083 c 0.063 0 0.113 -0.051 0.113 -0.113 v -1.292 C 20.738 18.396 20.688 18.345 20.625 18.345 z"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 19.343 17.036 c 0 -0.063 -0.051 -0.113 -0.113 -0.113 h -1.292 c -0.063 0 -0.113 0.051 -0.113 0.113 v 1.016 h 1.519 V 17.036 z"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 17.824 21.119 c 0 0.063 0.051 0.113 0.113 0.113 h 1.292 c 0.063 0 0.113 -0.051 0.113 -0.113 v -1.017 h -1.519 V 21.119 z"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 22.836 4.96 h -15.1 c -0.344 0 -0.624 0.279 -0.624 0.624 v 18.375 c 0 0.345 0.279 0.624 0.624 0.624 h 15.1 c 0.345 0 0.624 -0.279 0.624 -0.624 V 5.583 C 23.46 5.239 23.181 4.96 22.836 4.96 z M 22.212 23.334 H 8.36 V 10.04 h 13.852 V 23.334 z M 22.212 8.793 H 8.36 V 6.207 h 13.852 V 8.793 z"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 16.542 14.363 h 4.083 c 0.063 0 0.113 -0.051 0.113 -0.113 V 12.958 c 0 -0.063 -0.051 -0.113 -0.113 -0.113 h -4.083 c -0.063 0 -0.113 0.051 -0.113 0.113 v 1.292 C 16.429 14.313 16.479 14.363 16.542 14.363 z"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 10.042 14.363 h 1.283 v 1.282 c 0 0.063 0.051 0.113 0.113 0.113 h 1.292 c 0.063 0 0.113 -0.051 0.113 -0.113 v -1.282 h 1.283 c 0.063 0 0.113 -0.051 0.113 -0.113 V 12.958 c 0 -0.063 -0.051 -0.113 -0.113 -0.113 H 12.842 V 11.563 c 0 -0.063 -0.051 -0.113 -0.113 -0.113 H 11.438 c -0.063 0 -0.113 0.051 -0.113 0.113 v 1.283 H 10.042 c -0.063 0 -0.113 0.051 -0.113 0.113 v 1.292 C 9.928 14.313 9.979 14.363 10.042 14.363 z"/>
-    <path android:fillColor="@android:color/white" android:pathData="M 13.157 19.078 l 0.907 -0.907 c 0.021 -0.021 0.033 -0.05 0.033 -0.08 s -0.012 -0.059 -0.033 -0.08 l -0.914 -0.913 c -0.044 -0.045 -0.116 -0.045 -0.16 0 l -0.907 0.907 l -0.907 -0.907 c -0.044 -0.045 -0.116 -0.045 -0.16 0 l -0.913 0.913 c -0.044 0.044 -0.044 0.116 0 0.16 l 0.907 0.907 l -0.907 0.907 c -0.044 0.044 -0.044 0.116 0 0.16 l 0.913 0.914 c 0.021 0.021 0.05 0.033 0.08 0.033 s 0.059 -0.012 0.08 -0.033 l 0.907 -0.907 l 0.907 0.907 c 0.021 0.021 0.05 0.033 0.08 0.033 s 0.059 -0.012 0.08 -0.033 l 0.914 -0.914 c 0.044 -0.044 0.044 -0.116 0 -0.16 L 13.157 19.078 z"/>
+
+    <!-- Calculator body -->
+    <path
+        android:pathData="M33,10 L15,10 C13.9,10 13,10.9 13,12 L13,36 C13,37.1 13.9,38 15,38 L33,38 C34.1,38 35,37.1 35,36 L35,12 C35,10.9 34.1,10 33,10Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Display screen -->
+    <path
+        android:pathData="M32,12 L16,12 C15.4,12 15,12.4 15,13 L15,19 C15,19.6 15.4,20 16,20 L32,20 C32.6,20 33,19.6 33,19 L33,13 C33,12.4 32.6,12 32,12Z"
+        android:fillColor="@color/colorCalculatorButton"/>
+
+    <!-- Plus sign - properly centered in left area -->
+    <path
+        android:pathData="M18,24 L18,27 L15,27 L15,30 L18,30 L18,33 L21,33 L21,30 L24,30 L24,27 L21,27 L21,24 L18,24Z"
+        android:fillColor="@color/colorCalculatorButton"/>
+
+    <!-- Equals sign - properly positioned in right area -->
+    <path
+        android:pathData="M27,26 L32,26 L32,28 L27,28 L27,26Z M27,30 L32,30 L32,32 L27,32 L27,30Z"
+        android:fillColor="@color/colorCalculatorButton"/>
+
+    <!-- Number buttons as dots -->
+    <path
+        android:pathData="M17,23 m-1,0 a1,1 0,1,1 2,0 a1,1 0,1,1 -2,0"
+        android:fillColor="@color/colorCalculatorButton"/>
+    <path
+        android:pathData="M19,34.5 m-1,0 a1,1 0,1,1 2,0 a1,1 0,1,1 -2,0"
+        android:fillColor="@color/colorCalculatorButton"/>
+    <path
+        android:pathData="M26,34.5 m-1,0 a1,1 0,1,1 2,0 a1,1 0,1,1 -2,0"
+        android:fillColor="@color/colorCalculatorButton"/>
 </vector>
