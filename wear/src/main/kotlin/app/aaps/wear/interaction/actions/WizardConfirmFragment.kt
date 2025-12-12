@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.fragment.app.Fragment
 import androidx.wear.activity.ConfirmationActivity
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventWearToMobile
@@ -42,7 +41,7 @@ class WizardConfirmFragment : DaggerFragment() {
         AndroidSupportInjection.inject(this)
         super.onAttach(context)
     }
-    
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_wizard_confirm, container, false)
     }
@@ -64,7 +63,7 @@ class WizardConfirmFragment : DaggerFragment() {
 
             val intent = Intent(requireContext(), ConfirmationActivity::class.java).apply {
                 putExtra(ConfirmationActivity.EXTRA_ANIMATION_TYPE, ConfirmationActivity.SUCCESS_ANIMATION)
-                putExtra(ConfirmationActivity.EXTRA_MESSAGE, getString(R.string.action_wizard_confirmation))
+                putExtra(ConfirmationActivity.EXTRA_MESSAGE, getString(R.string.wizard_success))
             }
             startActivity(intent)
             requireActivity().finishAffinity()

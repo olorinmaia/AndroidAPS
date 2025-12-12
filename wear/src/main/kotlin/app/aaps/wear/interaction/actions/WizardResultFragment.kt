@@ -137,7 +137,7 @@ class WizardResultFragment : Fragment() {
         }
 
         // Add percentage breakdown if needed
-        if (percentage != 100 && !totalBeforePercentage.isNaN()) {
+        if (percentage != 100 && !totalBeforePercentage.isNaN() && totalBeforePercentage > 0) {
             val divider = View(requireContext())
             divider.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,

@@ -22,6 +22,7 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="0dp"
                 android:layout_marginBottom="4dp"
                 app:cardBackgroundColor="@color/primary_dark"
                 app:cardCornerRadius="8dp"
@@ -31,7 +32,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="8dp"
+                    android:padding="9dp"
                     android:gravity="center_horizontal">
 
                     <TextView
@@ -39,7 +40,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/wizard_total_insulin"
-                        android:textSize="10sp"
+                        android:textSize="11sp"
                         android:textColor="#B0BEC5"
                         android:gravity="center" />
 
@@ -55,7 +56,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0.0"
-                            android:textSize="22sp"
+                            android:textSize="26sp"
                             android:textStyle="bold"
                             android:textColor="#FFFFFF" />
 
@@ -63,7 +64,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text=" U"
-                            android:textSize="22sp"
+                            android:textSize="26sp"
                             android:textStyle="bold"
                             android:textColor="#FFFFFF"
                             android:layout_marginStart="2dp" />
@@ -75,7 +76,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="0g carbs"
-                        android:textSize="11sp"
+                        android:textSize="13sp"
                         android:textColor="@color/carbs"
                         android:gravity="center" />
                 </LinearLayout>
@@ -95,7 +96,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="6dp">
+                    android:padding="5dp">
 
                     <!-- Calculation Header - Always Visible, Clickable -->
                     <LinearLayout
@@ -104,7 +105,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingVertical="2dp"
+                        android:paddingVertical="6dp"
                         android:background="?attr/selectableItemBackground">
 
                         <TextView
@@ -112,7 +113,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/wizard_calculation"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="#B0BEC5" />
 
@@ -121,7 +122,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="▼"
-                            android:textSize="10sp"
+                            android:textSize="12sp"
                             android:textColor="#B0BEC5"
                             android:paddingStart="8dp"
                             android:paddingEnd="0dp" />
@@ -170,29 +171,55 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Swipe to Confirm Hint -->
+            <!-- Swipe Left to Confirm Hint -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:gravity="center"
-                android:paddingVertical="12dp">
+                android:paddingVertical="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="◀"
-                    android:textSize="16sp"
-                    android:textColor="#66BB6A"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/wizard_swipe_to_confirm"
+                    android:text="@string/wizard_swipe_left_confirm"
                     android:textSize="12sp"
                     android:textColor="#B0BEC5"
-                    android:gravity="center" />
+                    android:gravity="center"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- Three animated-looking arrows pointing left -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="◀"
+                        android:textSize="18sp"
+                        android:textColor="#4CAF50"
+                        android:alpha="0.5" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="◀"
+                        android:textSize="18sp"
+                        android:textColor="#66BB6A"
+                        android:alpha="0.75"
+                        android:layout_marginStart="2dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="◀"
+                        android:textSize="18sp"
+                        android:textColor="#66BB6A"
+                        android:layout_marginStart="2dp" />
+                </LinearLayout>
             </LinearLayout>
 
         </LinearLayout>
