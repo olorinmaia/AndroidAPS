@@ -1,6 +1,8 @@
 package app.aaps.wear.interaction.actions
-
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -32,6 +34,9 @@ class WizardResultActivity : DaggerAppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_wizard_pager)
+
+        // Vibrate twice when wizard result appears
+        vibrateOnResult()
 
         // Get all data from intent
         timestamp = intent.getLongExtra("timestamp", 0L)
@@ -71,6 +76,33 @@ class WizardResultActivity : DaggerAppCompatActivity() {
 
         // Start on first page (ResultFragment)
         viewPager.currentItem = 0
+    }
+
+    private fun vibrateOnResult() {
+        try {
+            @Suppress("DEPRECATION")
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator
+            } else {
+                getSystemService(VIBRATOR_SERVICE) as? Vibrator
+            }
+
+            vibrator?.let {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Double vibration pattern: vibrate, pause, vibrate
+                    val timings = longArrayOf(0, 100, 50, 100)
+                    val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
+                    it.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+                } else {
+                    // Fallback for older devices
+                    @Suppress("DEPRECATION")
+                    it.vibrate(longArrayOf(0, 100, 50, 100), -1)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("WizardResultActivity", "Vibration error", e)
+        }
     }
 
     private inner class WizardPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activity) {
