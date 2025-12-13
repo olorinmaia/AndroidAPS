@@ -24,7 +24,6 @@ class WizardResultActivity : DaggerAppCompatActivity() {
     private var insulinBolusIob: Double? = null
     private var insulinBasalIob: Double? = null
     private var insulinTrend: Double? = null
-    private var insulinSuperbolus: Double? = null
     private var tempTarget: String? = null
     private var percentage: Int = 100
     private var totalBeforePercentage: Double? = null

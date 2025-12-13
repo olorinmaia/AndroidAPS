@@ -63,11 +63,11 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text=" U"
+                            android:text="@string/units_short"
                             android:textSize="26sp"
                             android:textStyle="bold"
                             android:textColor="#FFFFFF"
-                            android:layout_marginStart="2dp" />
+                            android:layout_marginStart="4dp" />
                     </LinearLayout>
 
                     <TextView
@@ -75,7 +75,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="0g carbs"
+                        android:text="@string/wizard_carbs_format"
                         android:textSize="13sp"
                         android:textColor="@color/carbs"
                         android:gravity="center" />

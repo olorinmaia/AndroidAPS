@@ -103,13 +103,13 @@ class WizardResultFragment : Fragment() {
 
         // 1. BG correction if used - with TT on same line
         if (!insulinBg.isNaN()) {
-            val bgLabel = if (!tempTarget.isNullOrEmpty()) "BG (TT: $tempTarget)" else "BG"
+            val bgLabel = if (!tempTarget.isNullOrEmpty()) getString(R.string.wizard_result_bg_tt, tempTarget) else getString(R.string.wizard_result_bg)
             rows.add(WizardCalculationRow(bgLabel, insulinBg))
         }
 
         // 2. Trend if used
         if (!insulinTrend.isNaN() && insulinTrend != 0.0) {
-            rows.add(WizardCalculationRow("15' Trend", insulinTrend))
+            rows.add(WizardCalculationRow(getString(R.string.wizard_result_trend), insulinTrend))
         }
 
         // 3. IOB if used (combine bolus and basal)
@@ -120,16 +120,16 @@ class WizardResultFragment : Fragment() {
             else -> Double.NaN
         }
         if (!totalIob.isNaN() && totalIob != 0.0) {
-            rows.add(WizardCalculationRow("IOB", totalIob))
+            rows.add(WizardCalculationRow(getString(R.string.wizard_result_iob), totalIob))
         }
 
         // 4. COB if used
         if (!insulinCob.isNaN() && insulinCob != 0.0) {
-            rows.add(WizardCalculationRow("COB", insulinCob))
+            rows.add(WizardCalculationRow(getString(R.string.wizard_result_cob), insulinCob))
         }
 
         // 5. Carbs - always last
-        rows.add(WizardCalculationRow("Carbs", insulinCarbs))
+        rows.add(WizardCalculationRow(getString(R.string.wizard_result_carbs), insulinCarbs))
 
         // Add all rows to UI
         rows.forEach { row ->
@@ -148,7 +148,7 @@ class WizardResultFragment : Fragment() {
             divider.setBackgroundColor(resources.getColor(R.color.divider, null))
             calculationRowsContainer.addView(divider)
 
-            builder.addCalculationRow(calculationRowsContainer, WizardCalculationRow("Subtotal", totalBeforePercentage))
+            builder.addCalculationRow(calculationRowsContainer, WizardCalculationRow(getString(R.string.wizard_result_subtotal), totalBeforePercentage))
 
             val percentageAdjustment = totalInsulin - totalBeforePercentage
             builder.addCalculationRow(calculationRowsContainer, WizardCalculationRow("${percentage}%", percentageAdjustment))
@@ -165,7 +165,7 @@ class WizardResultFragment : Fragment() {
         divider2.setBackgroundColor(resources.getColor(R.color.divider, null))
         calculationRowsContainer.addView(divider2)
 
-        builder.addCalculationRow(calculationRowsContainer, WizardCalculationRow("Total", totalInsulin))
+        builder.addCalculationRow(calculationRowsContainer, WizardCalculationRow(getString(R.string.wizard_result_total), totalInsulin))
 
         // Setup collapsible calculation details
         setupCalculationToggle(view)

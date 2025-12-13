@@ -296,9 +296,19 @@
     <string name="wizard_total_insulin">Total Insulin</string>
     <string name="wizard_calculation">Calculation</string>
     <string name="wizard_carbs_format">%d g carbs</string>
-    <string name="wizard_settings_format">IC: %s | ISF: %s</string>
+    <string name="wizard_settings_format">IC: %1$s | ISF: %2$s</string>
     <string name="wizard_percentage_label">Percentage</string>
     <string name="wizard_bolus_delivered">Bolus delivered</string>
     <string name="wizard_success">Success</string>
     <string name="wizard_swipe_left_confirm">Swipe left to confirm</string>
+    <string name="wizard_result_bg">BG</string>
+    <string name="wizard_result_bg_tt">BG (TT: %1$s)</string>
+    <string name="wizard_result_trend">15\' Trend</string>
+    <string name="wizard_result_iob">IOB</string>
+    <string name="wizard_result_cob">COB</string>
+    <string name="wizard_result_carbs">Carbs</string>
+    <string name="wizard_result_subtotal">Subtotal</string>
+    <string name="wizard_result_total">Total</string>
+    <string name="wizard_insulin_format">%1$s U</string>
+    <string name="insulin_unit_short">U</string>
 </resources>

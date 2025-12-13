@@ -55,8 +55,8 @@ class WizardConfirmFragment : DaggerFragment() {
         val totalInsulin = args.getDouble("total_insulin")
         val carbs = args.getInt("carbs")
 
-        view.findViewById<TextView>(R.id.confirm_total_insulin).text = "${decimalFormat.format(totalInsulin)} U"
-        view.findViewById<TextView>(R.id.confirm_carbs).text = "${carbs}g carbs"
+        view.findViewById<TextView>(R.id.confirm_total_insulin).text = getString(R.string.wizard_insulin_format, decimalFormat.format(totalInsulin))
+        view.findViewById<TextView>(R.id.confirm_carbs).text = getString(R.string.wizard_carbs_format, carbs)
 
         view.findViewById<ImageView>(R.id.confirm_button).setOnClickListener {
             rxBus.send(EventWearToMobile(EventData.ActionWizardConfirmed(timestamp)))

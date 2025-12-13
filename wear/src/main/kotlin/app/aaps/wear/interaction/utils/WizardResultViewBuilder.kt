@@ -11,7 +11,7 @@ import app.aaps.wear.R
 data class WizardCalculationRow(
     val label: String,
     val value: Double,
-    val unit: String = "U"
+    val unitResId: Int = R.string.insulin_unit_short  // Changed to resource ID
 )
 
 class WizardResultViewBuilder(private val context: Context) {
@@ -35,7 +35,10 @@ class WizardResultViewBuilder(private val context: Context) {
         } else {
             String.format("%.2f", row.value)
         }
-        valueView.text = "$formattedValue ${row.unit}"
+
+        // Get unit from string resource
+        val unit = context.getString(row.unitResId)
+        valueView.text = "$formattedValue $unit"
 
         // Color coding
         val color = when {
