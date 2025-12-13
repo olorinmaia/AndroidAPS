@@ -545,25 +545,15 @@ class DataHandlerMobile @Inject constructor(
             insulinFromBolusIOB = if (useIobPref) -bolusWizard.insulinFromBolusIOB else null,
             insulinFromBasalIOB = if (useIobPref) -bolusWizard.insulinFromBasalIOB else null,
             insulinFromTrend = if (useTrendPref) bolusWizard.insulinFromTrend else null,
-            insulinFromSuperBolus = null, // Never used in wear wizard
+            insulinFromSuperBolus = null,
             tempTarget = tempTargetString,
             percentageCorrection = if (percentage != 100) percentage else null,
             totalBeforePercentage = if (percentage != 100) bolusWizard.totalBeforePercentageAdjustment else null,
             cob = bolusWizard.cob
         )
-
         lastBolusWizard = bolusWizard
         lastQuickWizardEntry = null
-
-// In handleWizardPreCheck, right before rxBus.send()
-
-        aapsLogger.debug(LTag.WEAR, "Sending ActionWizardResult to wear")
-        aapsLogger.debug(LTag.WEAR, "Total insulin: ${wizardResult.totalInsulin}, Carbs: ${wizardResult.carbs}")
-        aapsLogger.debug(LTag.WEAR, "IC: ${wizardResult.ic}, Sens: ${wizardResult.sens}")
-
         rxBus.send(EventMobileToWear(wizardResult))
-
-        aapsLogger.debug(LTag.WEAR, "ActionWizardResult sent successfully")
     }
 
     private fun handleUserActionPreCheck(command: EventData.ActionUserActionPreCheck) {

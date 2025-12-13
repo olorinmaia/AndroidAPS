@@ -83,9 +83,6 @@ class DataHandlerWear @Inject constructor(
                     )
                 })
             }
-// In DataHandlerWear.kt, in the setupBus() method
-// Replace your existing ActionWizardResult handler with this:
-
         disposable += rxBus
             .toObservable(EventData.ActionWizardResult::class.java)
             .observeOn(aapsSchedulers.io)

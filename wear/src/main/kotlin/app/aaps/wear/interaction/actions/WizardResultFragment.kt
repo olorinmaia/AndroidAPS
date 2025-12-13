@@ -125,11 +125,11 @@ class WizardResultFragment : Fragment() {
 
         // 4. COB if used
         if (!insulinCob.isNaN() && insulinCob != 0.0) {
-            rows.add(WizardCalculationRow(getString(R.string.wizard_result_cob), insulinCob))
+            rows.add(WizardCalculationRow(getString(R.string.wizard_result_cob, cob), insulinCob))
         }
 
         // 5. Carbs - always last
-        rows.add(WizardCalculationRow(getString(R.string.wizard_result_carbs), insulinCarbs))
+        rows.add(WizardCalculationRow(getString(R.string.wizard_result_carbs, carbs), insulinCarbs))
 
         // Add all rows to UI
         rows.forEach { row ->

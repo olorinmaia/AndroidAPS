@@ -11,7 +11,7 @@ import app.aaps.wear.R
 data class WizardCalculationRow(
     val label: String,
     val value: Double,
-    val unitResId: Int = R.string.insulin_unit_short  // Changed to resource ID
+    val unitResId: Int = R.string.insulin_unit_short
 )
 
 class WizardResultViewBuilder(private val context: Context) {
