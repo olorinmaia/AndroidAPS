@@ -8,6 +8,11 @@ import app.aaps.wear.interaction.utils.Pair.Companion.create
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
+import androidx.wear.watchface.complications.data.ComplicationText
+import androidx.wear.watchface.complications.data.PlainComplicationText
+import androidx.wear.watchface.complications.data.TimeDifferenceComplicationText
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @Singleton
 class DisplayFormat @Inject internal constructor() {
@@ -73,9 +78,25 @@ class DisplayFormat @Inject internal constructor() {
         }
     }
 
-    fun shortTimeWithDelta(refTime: Long, rawDelta: String): String {
-        val timePart = shortTimeSince(refTime)  // e.g. "0'", "15'", "2h"
-        return timePart + " " + deltaSymbol() + SmallestDoubleString(rawDelta).minimise(8)
+
+    fun buildDeltaWithLiveTimeDifference(refTimeMs: Long, rawDelta: String, deltaSymbol: String): ComplicationText {
+        val startInstant = Instant.ofEpochMilli(refTimeMs)
+
+        // Live updating time difference text (updates every minute)
+        val timeDiffText = TimeDifferenceComplicationText.Builder
+            .ofTimeDifference(startInstant, null, ChronoUnit.MINUTES)
+            .build()
+
+        val deltaText = PlainComplicationText.Builder(
+            text = "$deltaSymbol${SmallestDoubleString(rawDelta).minimise(8)}"
+        ).build()
+
+        // Compose combined complication text: timeDiffText + " " + deltaText
+        return ComplicationText.Builder.ComplicationTextBuilder()
+            .addText(timeDiffText)
+            .addText(PlainComplicationText.Builder(text = " ").build())  // space between
+            .addText(deltaText)
+            .build()
     }
 
     /**
