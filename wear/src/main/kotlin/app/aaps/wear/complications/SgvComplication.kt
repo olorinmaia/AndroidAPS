@@ -3,25 +3,20 @@ package app.aaps.wear.complications
 import android.app.PendingIntent
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
-import androidx.wear.watchface.complications.data.CountUpTimeReference
+import app.aaps.wear.R
 import androidx.wear.watchface.complications.data.PlainComplicationText
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
-import androidx.wear.watchface.complications.data.TimeDifferenceComplicationText
-import androidx.wear.watchface.complications.data.TimeDifferenceStyle
 import app.aaps.core.interfaces.logging.LTag
 import dagger.android.AndroidInjection
-import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 /**
- * SGV (Sensor Glucose Value) Complication
- *
- * Shows current blood glucose with arrow and delta/time
- *
+ * Builds complication data for SGV.
+ * Supports SHORT_TEXT type with glucose value, arrow, delta, and age.
  */
 class SgvComplication : ModernBaseComplicationProviderService() {
 
-    // Not derived from DaggerService, do injection here
+    private val textPresentationSelector = "\uFE0E" // Text presentation selector
+
     override fun onCreate() {
         AndroidInjection.inject(this)
         super.onCreate()
@@ -32,20 +27,19 @@ class SgvComplication : ModernBaseComplicationProviderService() {
         data: app.aaps.wear.data.ComplicationData,
         complicationPendingIntent: PendingIntent
     ): ComplicationData? {
-        // Use dataset 0 (primary)
         val bgData = data.bgData
         aapsLogger.debug(LTag.WEAR, "SgvComplication building: dataset=0 sgv=${bgData.sgvString} arrow=${bgData.slopeArrow}")
 
         return when (type) {
-            ComplicationType.SHORT_TEXT      -> {
-                val shortText = bgData.sgvString + bgData.slopeArrow + "\uFE0E"
+            ComplicationType.SHORT_TEXT -> {
+                val shortText = "${bgData.sgvString}${bgData.slopeArrow}$textPresentationSelector"
 
-                val shortTitle = TimeDifferenceComplicationText.Builder(
-                    style = TimeDifferenceStyle.STOPWATCH,
-                    countUpTimeReference = CountUpTimeReference(Instant.ofEpochMilli(bgData.timeStamp))
-                )
-                    .setMinimumTimeUnit(TimeUnit.MINUTES)
-                    .build()
+                val rawDelta = if (displayFormat.sp.getBoolean(R.string.key_show_detailed_delta, false))
+                    bgData.deltaDetailed else bgData.delta
+
+                val shortTitleText = displayFormat.shortTimeWithDelta(bgData.timeStamp, rawDelta)
+
+                val shortTitle = PlainComplicationText.Builder(text = shortTitleText).build()
 
                 ShortTextComplicationData.Builder(
                     text = PlainComplicationText.Builder(text = shortText).build(),
@@ -56,8 +50,8 @@ class SgvComplication : ModernBaseComplicationProviderService() {
                     .build()
             }
 
-            else                             -> {
-                aapsLogger.warn(LTag.WEAR, "SgvComplication unexpected type: $type")
+            else -> {
+                aapsLogger.warn(LTag.WEAR, "${javaClass.simpleName} unexpected complication type: $type")
                 null
             }
         }

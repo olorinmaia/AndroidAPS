@@ -31,7 +31,7 @@ class DisplayFormat @Inject internal constructor() {
 
     private fun areComplicationsUnicode() = sp.getBoolean("complication_unicode", true)
 
-    private fun deltaSymbol() = if (areComplicationsUnicode()) "\u0394" else ""
+    fun deltaSymbol() = if (areComplicationsUnicode()) "\u0394" else ""
 
     private fun verticalSeparatorSymbol() = if (areComplicationsUnicode()) "\u205E" else "|"
 
@@ -71,6 +71,11 @@ class DisplayFormat @Inject internal constructor() {
                 weeks.toString() + context.getString(R.string.week_short)
             }
         }
+    }
+
+    fun shortTimeWithDelta(refTime: Long, rawDelta: String): String {
+        val timePart = shortTimeSince(refTime)  // e.g. "0'", "15'", "2h"
+        return timePart + " " + deltaSymbol() + SmallestDoubleString(rawDelta).minimise(8)
     }
 
     /**
