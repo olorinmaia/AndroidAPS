@@ -75,21 +75,59 @@ class ProcessedDeviceStatusDataImpl @Inject constructor(
         get() {
             val string = StringBuilder()
             val enacted = openAPSData.enacted
-            val suggested = openAPSData.suggested
-            if (enacted != null && openAPSData.clockEnacted != openAPSData.clockSuggested) string
-                .append("<b>")
-                .append("Enacted: </br>")
-                .append(dateUtil.minAgo(rh, openAPSData.clockEnacted))
-                .append("</b> ")
-                .append(enacted.reason)
-                .append("<br>")
-            if (suggested != null) string
-                .append("<b>")
-                .append("Suggested: </br>")
-                .append(dateUtil.minAgo(rh, openAPSData.clockSuggested))
-                .append("</b> ")
-                .append(suggested.reason)
-                .append("<br>")
+            val suggested = openAPSData.suggested ?: return HtmlHelper.fromHtml("")  // Early return if no suggested data (though this should always exist)
+
+            val timeWindowMs = 30_000L // 30 seconds
+
+            // Check if enacted is recent (within 30s of suggested or newer)
+            val enactedIsRecent = enacted != null &&
+                openAPSData.clockEnacted >= (openAPSData.clockSuggested - timeWindowMs)
+
+            // Check if reasons are the same (when both exist and enacted is recent)
+            val reasonsMatch = enactedIsRecent &&
+                enacted.reason.trim() == suggested.reason.trim()
+
+            when {
+                // Case 1: Enacted is recent and reasons match → show as single "Loop" entry
+                reasonsMatch -> {
+                    string
+                        .append("<b>")
+                        .append("Loop: </br>")
+                        .append(dateUtil.minAgo(rh, openAPSData.clockEnacted))
+                        .append("</b> ")
+                        .append(enacted.reason)
+                        .append("<br>")
+                }
+
+                // Case 2: Enacted is recent but reasons differ → show both
+                enactedIsRecent -> {
+                    string
+                        .append("<b>")
+                        .append("Enacted: </br>")
+                        .append(dateUtil.minAgo(rh, openAPSData.clockEnacted))
+                        .append("</b> ")
+                        .append(enacted.reason)
+                        .append("<br>")
+                        .append("<b>")
+                        .append("Suggested: </br>")
+                        .append(dateUtil.minAgo(rh, openAPSData.clockSuggested))
+                        .append("</b> ")
+                        .append(suggested.reason)
+                        .append("<br>")
+                }
+
+                // Case 3: No enacted or enacted is old → show only suggested
+                else -> {
+                    string
+                        .append("<b>")
+                        .append("Loop: </br>")
+                        .append(dateUtil.minAgo(rh, openAPSData.clockSuggested))
+                        .append("</b> ")
+                        .append(suggested.reason)
+                        .append("<br>")
+                }
+            }
+
             return HtmlHelper.fromHtml(string.toString())
         }
 
