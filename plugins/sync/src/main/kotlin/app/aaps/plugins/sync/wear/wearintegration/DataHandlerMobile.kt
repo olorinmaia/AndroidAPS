@@ -1491,8 +1491,10 @@ class DataHandlerMobile @Inject constructor(
         //temptarget
         val units = profileFunction.getUnits()
         var tempTargetLevel = 0
+        var tempTargetDuration = -1L
         val tempTarget = persistenceLayer.getTemporaryTargetActiveAt(dateUtil.now())?.let { tempTarget ->
             tempTargetLevel = 2     // Yellow
+            tempTargetDuration = tempTarget.end - dateUtil.now()
             profileUtil.toTargetRangeString(tempTarget.lowTarget, tempTarget.highTarget, GlucoseUnit.MGDL, units)
         } ?: profileFunction.getProfile()?.let { profile ->
             // If the target is not the same as set in the profile then oref has overridden it
@@ -1538,6 +1540,7 @@ class DataHandlerMobile @Inject constructor(
                     patientName = patientName,
                     tempTarget = tempTarget,
                     tempTargetLevel = tempTargetLevel,
+                    tempTargetDuration = tempTargetDuration,
                     reservoirString = reservoirString,
                     reservoir = reservoir,
                     reservoirLevel = reservoirLevel
