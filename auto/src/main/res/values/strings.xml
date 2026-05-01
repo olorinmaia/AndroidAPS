@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_loop_lgs">Low Glucose Suspend</string>
+    <string name="auto_loop_disabled">Loop Disabled</string>
+    <string name="auto_loop_suspended">Suspended</string>
+    <string name="auto_loop_resume">Resuming</string>
+<string name="auto_target_adjusted">Adjusted: %1$s</string>
+</resources>
