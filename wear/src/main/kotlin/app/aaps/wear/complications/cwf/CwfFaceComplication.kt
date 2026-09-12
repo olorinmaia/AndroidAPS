@@ -77,6 +77,87 @@ open class CwfFaceComplication : ModernBaseComplicationProviderService() {
          */
         private var warmWatchFace: CustomWatchface? = null
 
+        /**
+         * When a watch face last asked any of the three image sources for the picture; 0 until the
+         * first request. The system only asks a data source that a shown face has bound, so this is
+         * the one honest signal that somebody is looking: the code-based Custom watchface draws
+         * itself and never asks, and neither does any other face. [CwfComplicationUpdater] renders
+         * nothing while this is stale - see its `demandActive`.
+         */
+        @Volatile internal var lastRequestMs = 0L
+            private set
+
+        /** Called when a request arrives after a quiet spell, so an idle updater can start at once. */
+        @Volatile internal var onDemandResumed: (() -> Unit)? = null
+
+        /**
+         * Records a request; wakes the updater when it had gone idle.
+         *
+         * Not when the runtime has already said that no slot is bound: a request can still land a
+         * moment after the deactivation, queued by our own last tick, and measured on a Galaxy
+         * Watch 5 it did, 12 ms later - and revived demand for the whole timeout. With the slot
+         * table known to be empty, only an activation counts again.
+         */
+        internal fun noteRequest(aapsLogger: AAPSLogger? = null) {
+            if (bindingsKnown && activeSlots.isEmpty()) {
+                aapsLogger?.debug(LTag.WEAR, "CwfFaceComplication: request after the runtime let go, not demand")
+                return
+            }
+            noteDemand()
+        }
+
+        private fun noteDemand() {
+            val now = System.currentTimeMillis()
+            val wasIdle = !CwfComplicationUpdater.demandActive(lastRequestMs, now)
+            lastRequestMs = now
+            if (wasIdle) onDemandResumed?.invoke()
+        }
+
+        /**
+         * The slots currently bound to any of the three sources, keyed by source and the system's
+         * instance id. Only touched from the main thread, where the runtime delivers both callbacks.
+         *
+         * This is the fast way out. The request timestamp above ends demand ten minutes after the
+         * last ask; the runtime's deactivation tells us the moment the face lets go, so the loops
+         * can stop right then. The timestamp stays as the safety net for a deactivation that never
+         * comes.
+         */
+        private val activeSlots = mutableSetOf<String>()
+
+        /**
+         * Whether the runtime has told us anything about bindings in this process. It does not replay
+         * activations after a process restart, so until the first callback the set above says nothing
+         * and requests alone have to carry demand; after it, an empty set means what it says.
+         */
+        @Volatile private var bindingsKnown = false
+
+        /**
+         * An activation is demand by itself. Measured, the runtime asks for the picture *before* it
+         * activates the slot, seven seconds before on a Galaxy Watch 5, so with the table empty that
+         * request is rightly ignored - and if nothing followed the activation, the face would sit on
+         * that first picture until the runtime's own periodic ask, minutes later.
+         */
+        internal fun noteActivated(slot: String, aapsLogger: AAPSLogger) {
+            bindingsKnown = true
+            activeSlots += slot
+            aapsLogger.debug(LTag.WEAR, "CwfFaceComplication: slot $slot activated, ${activeSlots.size} active")
+            noteDemand()
+        }
+
+        internal fun noteDeactivated(slot: String, aapsLogger: AAPSLogger) {
+            bindingsKnown = true
+            activeSlots -= slot
+            aapsLogger.debug(LTag.WEAR, "CwfFaceComplication: slot $slot deactivated, ${activeSlots.size} active")
+            // The last one gone: nobody is looking any more, so demand ends now rather than when
+            // the timestamp runs out. Also taken for a slot never seen activated - after a process
+            // restart the runtime does not replay activations, and a deactivation still means the
+            // face is going away.
+            if (activeSlots.isEmpty() && lastRequestMs != 0L) {
+                lastRequestMs = 0L
+                aapsLogger.debug(LTag.WEAR, "CwfFaceComplication: no slot left, demand ends")
+            }
+        }
+
         /** How long the preview may wait on storage before falling back to the built-in image. */
         private const val PREVIEW_READ_TIMEOUT_MS = 500L
 
@@ -392,7 +473,20 @@ open class CwfFaceComplication : ModernBaseComplicationProviderService() {
      * Overriding the whole request also skips the base class's `DataStore` read, which this path
      * never used: the pipeline reads the data itself, and only when it has changed.
      */
+    /** Source and instance together: the runtime's instance id is per slot, the source tells the slots apart across the three services. */
+    private fun slotKey(complicationInstanceId: Int) = "${javaClass.simpleName}#$complicationInstanceId"
+
+    override fun onComplicationActivated(complicationInstanceId: Int, type: ComplicationType) {
+        noteActivated(slotKey(complicationInstanceId), aapsLogger)
+    }
+
+    override fun onComplicationDeactivated(complicationInstanceId: Int) {
+        noteDeactivated(slotKey(complicationInstanceId), aapsLogger)
+    }
+
     override fun onComplicationRequest(request: ComplicationRequest, listener: ComplicationRequestListener) {
+        // Somebody is looking: this is what lets the updater render at all
+        noteRequest(aapsLogger)
         // No tap action while the watch is dozing. A slot answers taps wherever it is drawn, so with
         // one attached the first tap on a sleeping watch was consumed by this complication and opened
         // AAPS instead of waking the screen - reported on a Galaxy Watch 4, where the tap highlight

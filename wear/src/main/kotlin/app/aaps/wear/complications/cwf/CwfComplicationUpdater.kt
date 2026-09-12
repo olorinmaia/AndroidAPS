@@ -49,6 +49,12 @@ import dev.zacsweers.metro.SingleIn
  * - **a preference change**, refreshing both halves at once, because a preference can change the
  *   layout itself and the user is looking at the watch when they change one.
  *
+ * All of it only while a face is actually showing the picture. The system asks a data source only
+ * for a bound complication, so a request within the last [DEMAND_TIMEOUT_MS] is the proof that
+ * somebody is looking; without one the loops idle and nothing is drawn or requested. That is what
+ * keeps a Wear OS 5 watch running the code-based Custom watchface, or a Wear OS 6 watch showing
+ * the complications face, from paying for pictures nobody sees.
+ *
  * Lives for the life of the process rather than of a service: a data source is bound only for as
  * long as it takes to answer one request, so nothing inside one can drive a schedule.
  */
@@ -161,6 +167,34 @@ class CwfComplicationUpdater(
 
         /** How long the producer waits when the queue is already full, or the watch is dozing. */
         private const val PRODUCER_IDLE_MS = 1_000L
+
+        /**
+         * How long after the last request the picture is still considered wanted.
+         *
+         * Everything here used to run from app start on every watch, whether or not any face showed
+         * the picture: a frame a second while awake and one a minute always, plus three update
+         * requests a second. On a Wear OS 5 watch the code-based Custom watchface draws itself and
+         * none of that was ever seen; on a Wear OS 6 watch showing any other face, the same. So the
+         * loops now run only while a face has asked recently.
+         *
+         * While a face is bound, demand renews itself: every tick here makes the runtime ask, once a
+         * second awake and once a minute dozing, and the sources declare an update period of sixty
+         * seconds on top, honoured every 1.5 to 6 minutes. Ten minutes is comfortably past all of
+         * that. Once the face is gone the runtime never asks again, so rendering stops within this
+         * long - and the moment it is selected again, its first request starts everything at once,
+         * see [CwfFaceComplication.onDemandResumed].
+         */
+        private const val DEMAND_TIMEOUT_MS = 10 * 60_000L
+
+        /** How often an idle loop looks whether somebody asked, cheap enough to not matter. */
+        private const val IDLE_POLL_MS = 5_000L
+
+        /**
+         * Whether a request at [lastRequestMs] still counts as demand at [now]. Pure, so the rule
+         * can be checked without a watch; 0 means nobody has asked yet.
+         */
+        internal fun demandActive(lastRequestMs: Long, now: Long, timeoutMs: Long = DEMAND_TIMEOUT_MS): Boolean =
+            lastRequestMs > 0 && now - lastRequestMs < timeoutMs
 
         /**
          * How many ticks in a row may find the queue empty before the rate drops.
@@ -319,6 +353,9 @@ class CwfComplicationUpdater(
             val ambient = CwfFaceComplication.isAmbient(context)
             if (ambient != wasAmbient) {
                 wasAmbient = ambient
+                // Nobody is looking: nothing to refresh and no loop worth restarting. The mode is
+                // read afresh by every frame anyway, so nothing here is needed later either.
+                if (!hasDemand()) return
                 aapsLogger.debug(LTag.WEAR, "CwfComplicationUpdater: ambient=$ambient secondsShown=${CwfFaceComplication.showsSeconds()}")
                 // Refreshed here and now rather than through the coalescing loop. That loop sleeps a
                 // second between passes, and the process is being frozen as the watch dozes, so a
@@ -408,15 +445,28 @@ class CwfComplicationUpdater(
      * takes to answer one request, so nothing inside one can prepare anything for later. The process
      * stays alive because `DataLayerListenerServiceWear` is a foreground service.
      */
+    /** Whether a face has asked for the picture recently enough to be worth rendering for. */
+    private fun hasDemand(): Boolean = demandActive(CwfFaceComplication.lastRequestMs, System.currentTimeMillis())
+
+    /**
+     * Whether the idle state has been logged since demand last ended. Kept outside the clock loop
+     * because the loop is restarted by every refresh, and a fresh loop would otherwise either log
+     * idle again or, as measured, not at all.
+     */
+    @Volatile private var idleAnnounced = false
+
     private fun startProducer() {
         producerJob?.cancel()
         producerJob = scope.launch {
             while (true) {
-                val wanted = !CwfFaceComplication.isAmbient(context) && CwfFaceComplication.showsSeconds()
+                // Nothing at all without demand - not even the minute frame that prepareAhead keeps
+                // ready, and no watch face is ever inflated for a picture nobody has asked for
+                val demand = hasDemand()
+                val wanted = demand && !CwfFaceComplication.isAmbient(context) && CwfFaceComplication.showsSeconds()
                 val built = wanted && CwfFaceComplication.prepareAhead(context, aapsLogger)
                 // Nothing to build: wait out the second rather than spin. The queue empties as frames
-                // are served, so there is work again within a second or so.
-                if (!built) delay(PRODUCER_IDLE_MS)
+                // are served, so there is work again within a second or so. Idle, look less often.
+                if (!built) delay(if (demand) PRODUCER_IDLE_MS else IDLE_POLL_MS)
             }
         }
     }
@@ -450,13 +500,25 @@ class CwfComplicationUpdater(
             //
             // Bounded, because the wait must never become the fault it is fixing: if the producer
             // cannot manage a frame in that time, the tick goes ahead and draws its own.
-            if (!CwfFaceComplication.isAmbient(context) && CwfFaceComplication.showsSeconds()) {
+            if (hasDemand() && !CwfFaceComplication.isAmbient(context) && CwfFaceComplication.showsSeconds()) {
                 val deadline = System.currentTimeMillis() + PRIME_TIMEOUT_MS
                 while (CwfFaceComplication.preparedFrames() == 0 && System.currentTimeMillis() < deadline)
                     delay(PRIME_POLL_MS)
             }
             var announced = 0L
             while (true) {
+                // Nobody asked: no requests either, they would only reach a face that is not there.
+                // The first request of a returning face restarts this loop, so the wait here is
+                // never what the wearer sees.
+                if (!hasDemand()) {
+                    announced = 0L
+                    if (!idleAnnounced) {
+                        idleAnnounced = true
+                        aapsLogger.debug(LTag.WEAR, "CwfComplicationUpdater: idle, no face has asked for the picture")
+                    }
+                    delay(IDLE_POLL_MS)
+                    continue
+                }
                 val interval =
                     if (!CwfFaceComplication.isAmbient(context) && CwfFaceComplication.showsSeconds()) secondsInterval()
                     else MINUTE_INTERVAL_MS
@@ -488,6 +550,15 @@ class CwfComplicationUpdater(
     }
 
     fun start() {
+        // A face that comes back after a quiet spell must not wait for the idle polls: its first
+        // request restarts both loops, so the second hand runs from the first tick. Restarting is
+        // what the loops already do on a mode change, so nothing else is needed.
+        CwfFaceComplication.onDemandResumed = {
+            aapsLogger.debug(LTag.WEAR, "CwfComplicationUpdater: a face asked for the picture, resuming")
+            idleAnnounced = false
+            startProducer()
+            startClockLoop()
+        }
         startProducer()
 
         // A newly sent zip: refreshed at once, outside the coalescing queue.
@@ -545,6 +616,11 @@ class CwfComplicationUpdater(
             ?.registerDisplayListener(displayListener, Handler(Looper.getMainLooper()))
 
         startClockLoop()
+        // One knock at start, in case a face already shows the picture: a bound face answers with
+        // a request, which is the demand the loops wait for. Without one, nothing happens, and
+        // nothing is drawn - which is exactly right for a watch showing any other face.
+        requestFace()
+        requestAmbientFace(force = true)
         aapsLogger.debug(LTag.WEAR, "CwfComplicationUpdater: started")
     }
 }

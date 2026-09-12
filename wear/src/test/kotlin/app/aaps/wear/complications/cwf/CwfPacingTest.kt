@@ -1,5 +1,6 @@
 package app.aaps.wear.complications.cwf
 
+import app.aaps.wear.AAPSLoggerTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
 
@@ -96,5 +97,88 @@ class CwfPacingTest {
     fun `stays optimistic before anything has been drawn`() {
         assertThat(CwfComplicationUpdater.intervalWhenNothingPrepared(consecutiveEmptyTicks = 10, lastFrameMs = 0))
             .isEqualTo(1_000)
+    }
+}
+
+// ---- whether anybody is looking at all --------------------------------------------------
+
+/**
+ * The rule that keeps the whole renderer idle on a watch showing any other face: a request from a
+ * bound face is the only proof that the picture is seen, and it goes stale after a while.
+ */
+class CwfDemandTest {
+
+    @Test
+    fun `nothing is wanted before the first request`() {
+        assertThat(CwfComplicationUpdater.demandActive(lastRequestMs = 0, now = 1_000_000)).isFalse()
+    }
+
+    @Test
+    fun `a recent request is demand`() {
+        assertThat(CwfComplicationUpdater.demandActive(lastRequestMs = 1_000_000, now = 1_000_000 + 60_000)).isTrue()
+    }
+
+    @Test
+    fun `demand goes stale once the face has stopped asking`() {
+        // Bound, the runtime asks at least every few minutes; ten minutes of silence means the face is gone
+        assertThat(CwfComplicationUpdater.demandActive(lastRequestMs = 1_000_000, now = 1_000_000 + 10 * 60_000)).isFalse()
+    }
+
+    @Test
+    fun `the window is the caller's to choose`() {
+        assertThat(CwfComplicationUpdater.demandActive(lastRequestMs = 1_000, now = 3_000, timeoutMs = 1_000)).isFalse()
+        assertThat(CwfComplicationUpdater.demandActive(lastRequestMs = 1_000, now = 1_500, timeoutMs = 1_000)).isTrue()
+    }
+
+    // ---- the runtime's own signal, which ends demand at once ----------------------------------
+
+    private val logger = AAPSLoggerTest()
+
+    // The slot table is process-wide state, so every test here leaves it empty when done. The
+    // "nothing known yet" state before the first callback cannot be brought back and is not tested.
+
+    @Test
+    fun `demand ends the moment the last bound slot lets go`() {
+        CwfFaceComplication.noteActivated("CwfFaceComplication#6", logger)
+        CwfFaceComplication.noteActivated("CwfAmbientFaceComplication#7", logger)
+        CwfFaceComplication.noteRequest()
+        assertThat(CwfFaceComplication.lastRequestMs).isNotEqualTo(0L)
+
+        // One slot gone, the other still shows the picture
+        CwfFaceComplication.noteDeactivated("CwfFaceComplication#6", logger)
+        assertThat(CwfFaceComplication.lastRequestMs).isNotEqualTo(0L)
+
+        CwfFaceComplication.noteDeactivated("CwfAmbientFaceComplication#7", logger)
+        assertThat(CwfFaceComplication.lastRequestMs).isEqualTo(0L)
+    }
+
+    @Test
+    fun `an activation is demand by itself`() {
+        // The runtime asks before it activates, so the activation must not wait for a request
+        CwfFaceComplication.noteActivated("CwfFaceComplication#6", logger)
+        assertThat(CwfFaceComplication.lastRequestMs).isNotEqualTo(0L)
+
+        CwfFaceComplication.noteDeactivated("CwfFaceComplication#6", logger)
+    }
+
+    @Test
+    fun `a request after the runtime let go does not revive demand`() {
+        // Measured: a request queued by our own last tick landed 12 ms after the deactivation
+        CwfFaceComplication.noteActivated("CwfFaceComplication#6", logger)
+        CwfFaceComplication.noteDeactivated("CwfFaceComplication#6", logger)
+        assertThat(CwfFaceComplication.lastRequestMs).isEqualTo(0L)
+
+        CwfFaceComplication.noteRequest()
+        assertThat(CwfFaceComplication.lastRequestMs).isEqualTo(0L)
+    }
+
+    @Test
+    fun `a deactivation of an unknown slot leaves a bound one alone`() {
+        CwfFaceComplication.noteActivated("CwfFaceComplication#6", logger)
+        CwfFaceComplication.noteDeactivated("CwfFaceComplication#99", logger)
+        assertThat(CwfFaceComplication.lastRequestMs).isNotEqualTo(0L)
+
+        CwfFaceComplication.noteDeactivated("CwfFaceComplication#6", logger)
+        assertThat(CwfFaceComplication.lastRequestMs).isEqualTo(0L)
     }
 }
