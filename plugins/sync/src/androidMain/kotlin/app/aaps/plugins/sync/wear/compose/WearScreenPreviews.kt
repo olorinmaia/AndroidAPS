@@ -22,7 +22,30 @@ internal fun WearMainContentPreview() {
             onLoadWatchface = {},
             onInfosWatchface = {},
             onExportTemplate = {},
-            onMoreWatchfaces = {}
+            onMoreWatchfaces = {},
+            onSelectPushedWatchface = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+internal fun WearMainContentComplicationsFacePreview() {
+    MaterialTheme {
+        WearMainContent(
+            uiState = WearUiState(
+                connectedDevice = "Galaxy Watch 8 (c3d4)",
+                isDeviceConnected = true,
+                customWatchfaceInstalled = false
+            ),
+            onResendData = {},
+            onOpenSettings = {},
+            onLoadWatchface = {},
+            onInfosWatchface = {},
+            onExportTemplate = {},
+            onMoreWatchfaces = {},
+            onSelectPushedWatchface = {}
         )
     }
 }
@@ -41,7 +64,8 @@ internal fun WearMainContentDisconnectedPreview() {
             onLoadWatchface = {},
             onInfosWatchface = {},
             onExportTemplate = {},
-            onMoreWatchfaces = {}
+            onMoreWatchfaces = {},
+            onSelectPushedWatchface = {}
         )
     }
 }

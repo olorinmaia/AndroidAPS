@@ -36,6 +36,7 @@ import app.aaps.core.interfaces.scenes.SceneAutomationApi
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.DoubleKey
 import app.aaps.core.keys.IntKey
+import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.TextRef
@@ -153,6 +154,8 @@ class WearPlugin(
             preferences.observe(StringNonKey.WearCwfWatchfaceName).drop(1).map {},
             preferences.observe(StringNonKey.WearCwfAuthorVersion).drop(1).map {},
             preferences.observe(StringNonKey.WearCwfFileName).drop(1).map {},
+            // Which Watch Face Format face the watch installs; the watch swaps its slot on arrival
+            preferences.observe(StringKey.WearPushedWatchface).drop(1).map {},
         ).collectResilient(newScope, aapsLogger, LTag.WEAR) {
             dataHandlerMobile.resendData("PreferenceChange")
             checkCustomWatchfacePreferences()

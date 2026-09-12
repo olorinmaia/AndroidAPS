@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WatchFaceInfo>
     <Preview value="@drawable/preview" />
-    <MultipleInstancesAllowed value="true" />
+    <!-- One instance only. Watch Face Studio writes true, and with it the picker kept a second
+         record of the same face after an uninstall from the watch settings and a reinstall: one
+         slot, one package, listed twice with the same picture. Nothing here needs several
+         instances of the face. -->
+    <MultipleInstancesAllowed value="false" />
     <FlavorsSupported value="false" />
     <!-- Now true, because there is finally something to edit: "Simplify UI in Always On Mode", a
          UserConfiguration in the document.

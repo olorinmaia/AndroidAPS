@@ -9,21 +9,54 @@ import androidx.wear.watchfacepush.WatchFacePushManagerFactory
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.sharedPreferences.SP
-import app.aaps.wear.BuildConfig
+import app.aaps.core.keys.PushedWatchfaceId
 import app.aaps.wear.watchfaces.WatchFacePushHelper.Companion.KEY_FACE_INSTALLED
 import dev.zacsweers.metro.Inject
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Installs and updates the embedded "AAPS V4" Watch Face Format face through the Watch Face Push
- * API. Only available on Wear OS 6+ (API 36) — the watches that no longer support the code-based
- * AAPS watchfaces and therefore have no other way to get an AAPS face.
+ * The Watch Face Format faces embedded in the wear app, one per `face` flavor of
+ * `:wear:watchfacepush`. The [id] is shared with the phone through [PushedWatchfaceId]: it names
+ * the embedded assets and ends the face's package name, which Watch Face Push requires to be
+ * `<wear app package>.watchfacepush.<id>`.
+ */
+enum class PushedFace(val id: String) {
+
+    /** The face designed in Watch Face Studio: a layout of AAPS complications */
+    WFS(PushedWatchfaceId.WFS),
+
+    /** The face that shows the wearer's own Custom watchface zip as a picture */
+    CWF(PushedWatchfaceId.CWF);
+
+    val assetApk: String get() = "watchfacepush/$id.apk"
+    val assetToken: String get() = "watchfacepush/${id}_token.txt"
+    fun packageName(appPackage: String): String = "$appPackage.watchfacepush.$id"
+
+    companion object {
+
+        /** The face for a stored id; an unknown id - never written by this app - falls back to [CWF], the default */
+        fun fromId(id: String?): PushedFace = entries.firstOrNull { it.id == id } ?: CWF
+    }
+}
+
+/**
+ * Installs and updates the embedded Watch Face Format faces through the Watch Face Push API. Only
+ * available on Wear OS 6+ (API 36) — the watches that no longer support the code-based AAPS
+ * watchfaces and therefore have no other way to get an AAPS face.
  *
- * The face APK and its validation token are generated at build time (see `EmbedWatchFaceTask` in
- * the wear build script) and shipped in assets. The token is bound to the exact APK bytes, so both
+ * Two faces are embedded (see [PushedFace]) but Watch Face Push gives an app **one** slot, measured
+ * as `slots used=1 remaining=0` on a Galaxy Watch 4. So the wearer chooses one on the phone, the
+ * choice arrives with the preferences and is kept in [selectedFace], and this helper makes sure the
+ * slot holds that face: a change of choice updates the slot with the other APK, which the API allows
+ * ("a completely different watch face"), at the price of resetting that face's own editor settings.
+ *
+ * The face APKs and their validation tokens are generated at build time (see `EmbedWatchFaceTask`
+ * in the wear build script) and shipped in assets. A token is bound to the exact APK bytes, so both
  * always travel together.
  */
 @Inject
@@ -35,11 +68,10 @@ class WatchFacePushHelper(
 
     companion object {
 
-        private const val ASSET_APK = "watchfacepush/aapsv4.apk"
-        private const val ASSET_TOKEN = "watchfacepush/aapsv4_token.txt"
         private const val MIN_SDK = 36
 
         const val KEY_FACE_INSTALLED = "wfpush_face_installed"
+
         /**
          * The face this app last pushed, stored as its validation token.
          *
@@ -51,14 +83,40 @@ class WatchFacePushHelper(
          * rescue them - it only shows while the face is missing.
          *
          * The token is a hash over the exact APK bytes we embed, so comparing it means "push when
-         * the face really changed, and never otherwise".
+         * the face really changed, and never otherwise". A change of [selectedFace] changes the
+         * token too, so the same compare also drives the swap.
          */
         private const val KEY_SYNCED_FACE = "wfpush_synced_face"
+
+        /**
+         * The [PushedFace.id] the wearer chose on the phone. Stored on every watch, supported or
+         * not: a watch that gets Wear OS 6 later pushes the chosen face on its next start.
+         */
+        private const val KEY_SELECTED_FACE = "wfpush_selected_face"
     }
 
-    private val facePackageName get() = "${context.packageName}.watchfacepush.aapsv4"
+    /** The face the wearer chose on the phone; [PushedFace.CWF] until a choice arrives - the watchface AAPS users know */
+    val selectedFace: PushedFace
+        get() = PushedFace.fromId(sp.getString(KEY_SELECTED_FACE, PushedFace.CWF.id))
 
-    /** Defensive: every flavor currently embeds the face, but a build without the asset must report unsupported */
+    /**
+     * Records the wearer's choice from the phone.
+     *
+     * @return true when the choice differs from the stored one, so the caller knows a push is due.
+     *   The push is the caller's to start: this runs inside the preferences handler, which must
+     *   stay cheap and Android-free.
+     */
+    fun selectFace(id: String): Boolean {
+        val face = PushedFace.fromId(id)
+        if (face == selectedFace) return false
+        sp.putString(KEY_SELECTED_FACE, face.id)
+        aapsLogger.debug(LTag.WEAR, "WatchFacePush: selected face ${face.id}")
+        return true
+    }
+
+    private val facePackageName get() = selectedFace.packageName(context.packageName)
+
+    /** Defensive: every flavor currently embeds the faces, but a build without the assets must report unsupported */
     private val hasEmbeddedFace: Boolean by lazy {
         try {
             context.assets.list("watchfacepush")?.isNotEmpty() == true
@@ -73,18 +131,18 @@ class WatchFacePushHelper(
      * Doubles as the identity of the face: the build generates it as a hash over the exact APK
      * bytes, so two builds share a token only when they carry the same face.
      */
-    private fun embeddedFaceToken(): String? =
+    private fun embeddedFaceToken(face: PushedFace): String? =
         try {
-            context.assets.open(ASSET_TOKEN).use { String(it.readBytes()) }.trim()
+            context.assets.open(face.assetToken).use { String(it.readBytes()) }.trim()
         } catch (e: IOException) {
-            aapsLogger.error(LTag.WEAR, "WatchFacePush: cannot read the embedded face token", e)
+            aapsLogger.error(LTag.WEAR, "WatchFacePush: cannot read the embedded ${face.id} face token", e)
             null
         }
 
     fun isSupported(): Boolean = Build.VERSION.SDK_INT >= MIN_SDK && hasEmbeddedFace
 
     /**
-     * Whether the embedded face is currently installed in this app's Watch Face Push slot.
+     * Whether the selected face is currently installed in this app's Watch Face Push slot.
      * Also refreshes the [KEY_FACE_INSTALLED] flag used for synchronous menu building.
      */
     suspend fun isFaceInstalled(): Boolean = withContext(Dispatchers.IO) {
@@ -105,17 +163,17 @@ class WatchFacePushHelper(
     }
 
     /**
-     * Called on app start: makes sure the embedded face is available in the watch face picker.
+     * Called on app start: makes sure the selected face is available in the watch face picker.
      * Each app install/update pushes the face once — the same contract as the code-based
      * watchfaces, which always ship with the app. A face the user removed stays removed until a
-     * reinstall from the main menu or the next app update. Never activates the face: selecting it
-     * is always the user's choice (picker, or the main menu entry).
+     * reinstall from the main menu, a change of the selected face, or the next app update. Never
+     * activates the face: selecting it is always the user's choice (picker, or the main menu entry).
      */
     suspend fun syncOnStartup() {
         if (!isSupported()) return
         // A matching token means this exact face was already put in place once — if it is missing
         // now, the user removed it: respect that
-        val token = embeddedFaceToken() ?: return
+        val token = embeddedFaceToken(selectedFace) ?: return
         if (sp.getString(KEY_SYNCED_FACE, "") == token) return
         aapsLogger.debug(LTag.WEAR, "WatchFacePush: embedded face changed, syncing")
         // Catches all its failures internally — this path runs on app start and must never take
@@ -124,7 +182,17 @@ class WatchFacePushHelper(
     }
 
     /**
-     * Installs the embedded face (or updates it if already installed).
+     * One install at a time. Three callers can want one at the same moment - the startup sync, the
+     * preferences arriving from the phone, and the main menu - and measured on a Galaxy Watch 5 two
+     * of them did run side by side: both saw an empty slot table, both called add, the first won with
+     * the face the phone had just switched away from, and the second failed with "limit of watch
+     * faces reached". Serialised, the second one finds the slot and updates it instead.
+     */
+    private val installLock = Mutex()
+
+    /**
+     * Installs the selected face, or updates this app's slot with it if the slot exists - whether
+     * it holds an older build of the same face or the other face.
      *
      * @param activate also try to make the face the active watch face afterwards. Pass true only
      *   for user-triggered installs (menu tap = the user wants the face on the wrist, including
@@ -136,39 +204,57 @@ class WatchFacePushHelper(
      */
     suspend fun installOrUpdate(activate: Boolean = false): Boolean = withContext(Dispatchers.IO) {
         if (!isSupported()) return@withContext false
-        val apkFile = File(context.cacheDir, "wfpush_aapsv4.apk")
-        try {
-            val manager = createManager()
-            val token = embeddedFaceToken() ?: return@withContext false
-            context.assets.open(ASSET_APK).use { input ->
-                apkFile.outputStream().use { input.copyTo(it) }
-            }
-            val existingSlotId = installedFaceSlotId(manager)
-            ParcelFileDescriptor.open(apkFile, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                if (existingSlotId == null) {
-                    manager.addWatchFace(fd, token)
-                } else {
-                    manager.updateWatchFace(existingSlotId, fd, token)
+        installLock.withLock {
+            // Read under the lock: a choice that arrived while another install was running is
+            // what this one must install, not what was selected when it was asked for
+            val face = selectedFace
+            val apkFile = File(context.cacheDir, "wfpush_${face.id}.apk")
+            try {
+                val manager = createManager()
+                val token = embeddedFaceToken(face) ?: return@withLock false
+                context.assets.open(face.assetApk).use { input ->
+                    apkFile.outputStream().use { input.copyTo(it) }
                 }
+                // Any slot of ours, not only one holding this face: with a single slot per app the
+                // other face has to give way, and the API updates a slot with a different package.
+                // Measured on a Galaxy Watch 5: the updated slot stays the active face, so the
+                // wrist follows the phone's choice by itself, without any activation permission.
+                val existingSlotId = ownSlotId(manager)
+                val action = ParcelFileDescriptor.open(apkFile, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                    if (existingSlotId == null) {
+                        manager.addWatchFace(fd, token)
+                        "installed"
+                    } else try {
+                        manager.updateWatchFace(existingSlotId, fd, token)
+                        "updated"
+                    } catch (e: WatchFacePushManager.UpdateWatchFaceException) {
+                        // A slot the runtime still lists but no longer accepts - left behind by an
+                        // uninstall of the face from the watch settings. Adding is what revives it.
+                        if (e.errorCode != WatchFacePushManager.UpdateWatchFaceException.ERROR_INVALID_SLOT_ID) throw e
+                        aapsLogger.debug(LTag.WEAR, "WatchFacePush: slot $existingSlotId is stale, adding instead")
+                        manager.addWatchFace(fd, token)
+                        "installed over a stale slot"
+                    }
+                }
+                if (activate) {
+                    installedFaceSlotId(manager)?.let { slotId -> setActive(manager, slotId) }
+                }
+                sp.putString(KEY_SYNCED_FACE, token)
+                sp.putBoolean(KEY_FACE_INSTALLED, true)
+                aapsLogger.debug(LTag.WEAR, "WatchFacePush: face ${face.id} $action")
+                true
+            } catch (e: Exception) {
+                // Broad on purpose: covers the typed Add/Update/List exceptions, IO on the embedded
+                // asset AND the raw RuntimeExceptions the manager surfaces across its IPC
+                aapsLogger.error(LTag.WEAR, "WatchFacePush: install/update of face ${face.id} failed", e)
+                false
+            } finally {
+                apkFile.delete()
             }
-            if (activate) {
-                installedFaceSlotId(manager)?.let { slotId -> setActive(manager, slotId) }
-            }
-            sp.putString(KEY_SYNCED_FACE, token)
-            sp.putBoolean(KEY_FACE_INSTALLED, true)
-            aapsLogger.debug(LTag.WEAR, "WatchFacePush: face ${if (existingSlotId == null) "installed" else "updated"}")
-            true
-        } catch (e: Exception) {
-            // Broad on purpose: covers the typed Add/Update/List exceptions, IO on the embedded
-            // asset AND the raw RuntimeExceptions the manager surfaces across its IPC
-            aapsLogger.error(LTag.WEAR, "WatchFacePush: install/update failed", e)
-            false
-        } finally {
-            apkFile.delete()
         }
     }
 
-    /** Whether the embedded face is the currently shown watch face */
+    /** Whether the selected face is the currently shown watch face */
     suspend fun isFaceActive(): Boolean = withContext(Dispatchers.IO) {
         if (!isSupported()) return@withContext false
         try {
@@ -190,20 +276,28 @@ class WatchFacePushHelper(
     private fun createManager(): WatchFacePushManager =
         WatchFacePushManagerFactory.createWatchFacePushManager(context)
 
-    private suspend fun installedFaceSlotId(manager: WatchFacePushManager): String? {
+    private suspend fun listOwnFaces(manager: WatchFacePushManager): WatchFacePushManager.ListWatchFacesResponse {
         val response = manager.listWatchFaces()
         // How many faces one app may push is not stated in the API documentation - only that the
-        // number is limited - so it is logged here, where the response is already in hand. It decides
-        // whether AAPS can offer a second face alongside this one, or would have to replace it.
+        // number is limited - so it is logged here, where the response is already in hand. Measured
+        // as one on a Galaxy Watch 4, which is why the two embedded faces share this slot.
         aapsLogger.debug(
             LTag.WEAR,
             "WatchFacePush: slots used=${response.installedWatchFaceDetails.size} remaining=${response.remainingSlotCount}" +
                 " packages=${response.installedWatchFaceDetails.joinToString { it.packageName }}"
         )
-        return response.installedWatchFaceDetails
+        return response
+    }
+
+    /** The slot holding the selected face, or null */
+    private suspend fun installedFaceSlotId(manager: WatchFacePushManager): String? =
+        listOwnFaces(manager).installedWatchFaceDetails
             .firstOrNull { it.packageName == facePackageName }
             ?.slotId
-    }
+
+    /** Any slot this app holds, whichever face is in it, or null. The list only ever contains our own faces. */
+    private suspend fun ownSlotId(manager: WatchFacePushManager): String? =
+        listOwnFaces(manager).installedWatchFaceDetails.firstOrNull()?.slotId
 
     private suspend fun setActive(manager: WatchFacePushManager, slotId: String) {
         try {

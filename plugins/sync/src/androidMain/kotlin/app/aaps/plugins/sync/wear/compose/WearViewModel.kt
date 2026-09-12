@@ -25,6 +25,8 @@ import app.aaps.core.interfaces.rx.weardata.EventData
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.versionChecker.VersionCheckerUtils
 import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.PushedWatchfaceId
+import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.plugins.sync.wear.WearPlugin
@@ -55,6 +57,11 @@ data class WearUiState(
     val hasCustomWatchface: Boolean = false,
     val watchfaceName: String = "",
     val watchfaceImage: ImageBitmap? = null,
+    /**
+     * Whether the face the watch installs through Watch Face Push is the one that shows the
+     * custom watchface. When it is not, a loaded zip reaches the watch but stays invisible there.
+     */
+    val customWatchfaceInstalled: Boolean = true,
     val showInfos: Boolean = false,
     val cwfInfosState: CwfInfosState? = null,
     val showImportList: Boolean = false,
@@ -140,6 +147,11 @@ class WearViewModel(
             }
         }
         viewModelScope.launch {
+            preferences.observe(StringKey.WearPushedWatchface).collect { face ->
+                _uiState.update { it.copy(customWatchfaceInstalled = face == PushedWatchfaceId.CWF) }
+            }
+        }
+        viewModelScope.launch {
             rxBus.toFlow(EventWearUpdateGui::class).collect { event ->
                 if (event.exportFile) {
                     _toastEvent.emit(rh.gs(SyncStrings.wear_new_custom_watchface_exported))
@@ -168,6 +180,11 @@ class WearViewModel(
 
     fun exportCustomWatchface() {
         rxBus.send(EventMobileToWear(EventData.ActionrequestCustomWatchface(true)))
+    }
+
+    /** Stores the wearer's choice of pushed face; the plugin observes the key and resends the preferences to the watch */
+    fun selectPushedWatchface(face: String) {
+        preferences.put(StringKey.WearPushedWatchface, face)
     }
 
     fun showCwfInfos() {

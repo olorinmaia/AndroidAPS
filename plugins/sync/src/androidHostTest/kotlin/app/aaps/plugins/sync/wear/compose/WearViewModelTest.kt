@@ -13,6 +13,8 @@ import app.aaps.core.interfaces.rx.weardata.CwfMetadataKey
 import app.aaps.core.interfaces.rx.weardata.EventData
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.versionChecker.VersionCheckerUtils
+import app.aaps.core.keys.PushedWatchfaceId
+import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.plugins.sync.wear.WearPlugin
@@ -50,6 +52,7 @@ internal class WearViewModelTest {
     private val connectedDeviceFlow = MutableStateFlow<String?>(null)
     private val savedCustomWatchfaceFlow = MutableStateFlow<CwfData?>(null)
     private val eventWearUpdateGuiFlow = MutableSharedFlow<EventWearUpdateGui>()
+    private val pushedWatchfaceFlow = MutableStateFlow(PushedWatchfaceId.CWF)
 
     private lateinit var sut: WearViewModel
 
@@ -60,6 +63,7 @@ internal class WearViewModelTest {
         whenever(wearPlugin.connectedDevice).thenReturn(connectedDeviceFlow)
         whenever(wearPlugin.savedCustomWatchface).thenReturn(savedCustomWatchfaceFlow)
         whenever(rxBus.toFlow(EventWearUpdateGui::class)).thenReturn(eventWearUpdateGuiFlow)
+        whenever(preferences.observe(StringKey.WearPushedWatchface)).thenReturn(pushedWatchfaceFlow)
         whenever(rh.gs(SyncStrings.no_watch_connected)).thenReturn("No watch connected")
         sut = WearViewModel(wearPlugin, rxBus, rh, dateUtil, preferences, versionCheckerUtils, fileListProvider, aapsLogger)
     }
@@ -124,6 +128,22 @@ internal class WearViewModelTest {
         savedCustomWatchfaceFlow.value = null
         assertThat(sut.uiState.value.hasCustomWatchface).isFalse()
         assertThat(sut.uiState.value.watchfaceName).isEmpty()
+    }
+
+    @Test
+    fun `the custom watchface hint follows the pushed watchface setting`() {
+        // Custom watchface installed on the watch: nothing to warn about
+        assertThat(sut.uiState.value.customWatchfaceInstalled).isTrue()
+
+        // The complications face installed instead: a loaded zip would not be shown
+        pushedWatchfaceFlow.value = PushedWatchfaceId.WFS
+        assertThat(sut.uiState.value.customWatchfaceInstalled).isFalse()
+    }
+
+    @Test
+    fun `selectPushedWatchface stores the choice for the plugin to resend`() {
+        sut.selectPushedWatchface(PushedWatchfaceId.WFS)
+        verify(preferences).put(StringKey.WearPushedWatchface, PushedWatchfaceId.WFS)
     }
 
     @Test

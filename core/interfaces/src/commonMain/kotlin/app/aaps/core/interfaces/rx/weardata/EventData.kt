@@ -399,7 +399,13 @@ sealed class EventData : Event() {
         val insulinButtonIncrement1: Double,
         val insulinButtonIncrement2: Double,
         val carbsButtonIncrement1: Int,
-        val carbsButtonIncrement2: Int
+        val carbsButtonIncrement2: Int,
+        /**
+         * Which embedded Watch Face Format face the wear app installs through Watch Face Push, as
+         * a value of `StringKey.WearPushedWatchface`. Defaulted, so a payload from a phone that
+         * predates the field still decodes and keeps the face that was pushed before.
+         */
+        val pushedWatchface: String = "cwf"
     ) : EventData()
 
     @Serializable

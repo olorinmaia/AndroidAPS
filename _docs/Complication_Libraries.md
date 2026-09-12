@@ -1931,6 +1931,15 @@ WatchFacePush: slots used=1 remaining=0 packages=<app>.watchfacepush.aapsv4
 So the quota is **one face per app**. An app that already pushed a face has no room for a second;
 it can only `updateWatchFace()` the slot it holds, or `removeWatchFace()` to free it.
 
+That is how AAPS ships two faces anyway. `updateWatchFace()` accepts "a completely different watch
+face" (its KDoc), so the wear app embeds both faces (`wfs`, the Watch Face Studio layout of
+complications, and `cwf`, the picture of the Custom watchface) and fills its one slot with the face
+chosen in the phone's wear settings (`StringKey.WearPushedWatchface`). The two faces have different
+package suffixes on purpose: the runtime never re-applies `DefaultProviderPolicy` to a slot id it has
+already bound, and the faces use overlapping slot ids with different providers. The KDoc also says
+the face's own user configuration is reset when the package name changes, so a switch and back
+loses the complication choices made in the face editor.
+
 Note `installedWatchFaceDetails` lists only faces added by the calling app, so this count is
 per-app, not device-wide.
 
