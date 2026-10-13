@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -38,6 +41,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
@@ -73,7 +77,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.format.NumberFormat
@@ -87,6 +93,7 @@ import app.aaps.core.ui.compose.CarbTimeRow
 import app.aaps.core.ui.compose.ExpandableRowHeader
 import app.aaps.core.ui.compose.NumberInputRow
 import app.aaps.core.ui.compose.QuickAddButtons
+import app.aaps.core.ui.compose.StepButtons
 import app.aaps.core.ui.compose.bottomBarSafeArea
 import app.aaps.core.ui.compose.clearFocusOnTap
 import app.aaps.core.ui.compose.consumeOverscroll
@@ -339,16 +346,29 @@ internal fun WizardDialogContent(
                             .fillMaxWidth()
                             .clickable { onCalculationExpandToggle() },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
+                        // The title gives way first: it is the weighted child, so it is measured
+                        // after the values and gets only the space they leave, shrinking its font
+                        // down to the minimum before it is cut. On a narrow screen the summary
+                        // used to be cut off instead, and the summary is what matters here.
+                        BasicText(
                             text = stringResource(CoreUiStrings.wizard_calculation),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = LocalContentColor.current
+                            ),
+                            autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 16.sp, stepSize = 1.sp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        // Last resort when the values alone are wider than the row (very big
+                        // font): a value that does not fit moves to the next line as a whole,
+                        // still right-aligned.
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                            itemVerticalAlignment = Alignment.CenterVertically
                         ) {
                             // Result summary (always visible)
                             if (uiState.hasResult && (uiState.totalInsulin > 0.0 || uiState.carbs > 0)) {
@@ -398,12 +418,13 @@ internal fun WizardDialogContent(
                                     color = ElementType.CARBS.color()
                                 )
                             }
-                            Icon(
-                                imageVector = if (uiState.calculationExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = stringResource(if (uiState.calculationExpanded) CoreUiStrings.collapse else CoreUiStrings.expand),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
+                        // Outside the FlowRow, so it never wraps to the second line.
+                        Icon(
+                            imageVector = if (uiState.calculationExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = stringResource(if (uiState.calculationExpanded) CoreUiStrings.collapse else CoreUiStrings.expand),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     // Toggle buttons row (always visible)
@@ -720,17 +741,58 @@ internal fun WizardDialogContent(
                         }
                     }
 
-                    // Direct Correction input
-                    NumberInputRow(
-                        labelRef = CoreUiStrings.wizard_correction,
-                        value = uiState.directCorrection,
-                        onValueChange = onDirectCorrectionChange,
-                        valueRange = -uiState.maxBolus..uiState.maxBolus,
-                        step = uiState.bolusStep,
-                        unitLabel = CoreUiStrings.insulin_unit_shortname,
-                        decimalPlaces = 2,
-                        modifier = itemModifier
-                    )
+                    // Direct Correction (collapsible). The open text field looked like the carbs
+                    // field right above it, and users typed grams into it and bolused that many
+                    // units. Collapsed it keeps the +/- buttons, so a small adjustment needs no
+                    // keyboard; typing a value needs "Change" first.
+                    var correctionExpanded by rememberSaveable { mutableStateOf(false) }
+                    val correctionExpandRequester = rememberBringIntoViewOnExpand(correctionExpanded)
+                    val correctionLabel = stringResource(CoreUiStrings.wizard_correction)
+                    val correctionRange = -uiState.maxBolus..uiState.maxBolus
+                    Column(modifier = itemModifier.bringIntoViewRequester(correctionExpandRequester)) {
+                        ExpandableRowHeader(
+                            label = correctionLabel,
+                            expanded = correctionExpanded,
+                            onExpand = { correctionExpanded = true },
+                            trailingContent = {
+                                StepButtons(
+                                    label = correctionLabel,
+                                    value = uiState.directCorrection,
+                                    onValueChange = onDirectCorrectionChange,
+                                    valueRange = correctionRange,
+                                    step = uiState.bolusStep,
+                                    unitLabel = CoreUiStrings.insulin_unit_shortname,
+                                    decimalPlaces = 2
+                                )
+                            }
+                        ) {
+                            // While the field is open it shows the value itself; a copy here is noise.
+                            if (!correctionExpanded) {
+                                val hasCorrection = uiState.directCorrection != 0.0
+                                Text(
+                                    text = if (hasCorrection) stringResource(CoreUiStrings.format_insulin_units_signed, uiState.directCorrection)
+                                    else stringResource(InterfacesStrings.format_insulin_units, 0.0),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (hasCorrection) ElementType.INSULIN.color() else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        AnimatedVisibility(
+                            visible = correctionExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            NumberInputRow(
+                                labelRef = CoreUiStrings.wizard_correction,
+                                value = uiState.directCorrection,
+                                onValueChange = onDirectCorrectionChange,
+                                valueRange = correctionRange,
+                                step = uiState.bolusStep,
+                                unitLabel = CoreUiStrings.insulin_unit_shortname,
+                                decimalPlaces = 2
+                            )
+                        }
+                    }
 
                     // Carb Time (compact row with popup dialog)
                     CarbTimeRow(
