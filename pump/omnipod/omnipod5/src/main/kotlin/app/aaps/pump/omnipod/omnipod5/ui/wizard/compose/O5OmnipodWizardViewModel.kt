@@ -22,6 +22,7 @@ import app.aaps.core.interfaces.pump.PumpSync
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.AapsSchedulers
+import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.interfaces.Preferences
@@ -104,7 +105,8 @@ class O5OmnipodWizardViewModel @Inject constructor(
     profileRepository: ProfileRepository,
     pumpEnactResultProvider: () -> PumpEnactResult,
     logger: AAPSLogger,
-    aapsSchedulers: AapsSchedulers
+    aapsSchedulers: AapsSchedulers,
+    rxBus: RxBus
 ) : OmnipodWizardViewModel(
     logger,
     aapsSchedulers,
@@ -112,7 +114,9 @@ class O5OmnipodWizardViewModel @Inject constructor(
     profileFunction,
     profileRepository,
     insulinManager,
-    persistenceLayer
+    persistenceLayer,
+    rh,
+    rxBus
 ) {
 
     public override val pumpSource: Sources = Sources.Omnipod5
