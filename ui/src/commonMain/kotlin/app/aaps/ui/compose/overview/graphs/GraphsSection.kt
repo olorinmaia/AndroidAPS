@@ -104,6 +104,9 @@ private val SIMPLE_MODE_CONFIG = GraphConfig(
  */
 private const val RECENT_VALUES_SPOKEN = 5
 
+/** Moves the pill up over the treatment belt (48 dp, of which 16 dp overlap the BG graph). */
+private val INSPECT_PILL_OFFSET = (-32).dp
+
 /** Which way a predicted curve is travelling, which decides the sentence spoken for it. */
 internal enum class PredictionDirection { UP, DOWN, FLAT }
 
@@ -399,6 +402,9 @@ fun GraphsSection(
     }
 
 
+    // Set by the BG graph, read by every graph
+    val inspect = remember { GraphInspectState() }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -407,6 +413,7 @@ fun GraphsSection(
         // Treatment Belt Graph - running mode background + therapy events
         TreatmentBeltGraphCompose(
             viewModel = graphViewModel,
+            inspect = inspect,
             scrollState = beltScrollState,
             zoomState = beltZoomState,
             derivedTimeRange = derivedTimeRange,
@@ -482,7 +489,11 @@ fun GraphsSection(
             if (predictionSentences.isEmpty()) null
             else stringResource(UiStrings.a11y_predictions, predictionSentences.joinToString(" "))
 
-        Box(modifier = Modifier.offset(y = (-16).dp)) {
+        Box(
+            modifier = Modifier
+                .offset(y = (-16).dp)
+                .graphInspectTouch(inspect)
+        ) {
             BgGraphCompose(
                 viewModel = graphViewModel,
                 bgOverlays = graphConfig.bgOverlays,
@@ -491,6 +502,7 @@ fun GraphsSection(
                 derivedTimeRange = derivedTimeRange,
                 nowTimestamp = nowTimestamp,
                 visibleTimeRange = bgVisibleTimeRange,
+                inspect = inspect,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(graphConfig.bgHeight.dp)
@@ -517,6 +529,17 @@ fun GraphsSection(
                         .padding(end = 4.dp, top = 2.dp)
                 )
             }
+            // Own composable, so a finger move does not recompose this section
+            GraphInspectOverlay(
+                inspect = inspect,
+                graphViewModel = graphViewModel,
+                bgReadings = bgReadings,
+                minTimestamp = derivedTimeRange?.first,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = INSPECT_PILL_OFFSET)
+                    .padding(top = 2.dp, start = 36.dp, end = 36.dp)
+            )
         }
         // A node of its own rather than more text on the graph above, so a listener reaches the
         // readings first and swipes once to decide whether she wants the forecast, instead of having
@@ -559,6 +582,7 @@ fun GraphsSection(
                 nowTimestamp = nowTimestamp,
                 activityOverlay = SeriesType.ACTIVITY in graphConfig.iobOverlays,
                 onVisibleRangeChanged = { iobVisibleRange = it },
+                inspect = inspect,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(graphConfig.iobHeight.dp)
@@ -606,6 +630,7 @@ fun GraphsSection(
             Box(modifier = Modifier.offset(y = (-8).dp)) {
                 SecondaryGraphCompose(
                     viewModel = graphViewModel,
+                    inspect = inspect,
                     seriesTypes = secondary.series,
                     scrollState = secScrollStates[i],
                     zoomState = secZoomStates[i],
