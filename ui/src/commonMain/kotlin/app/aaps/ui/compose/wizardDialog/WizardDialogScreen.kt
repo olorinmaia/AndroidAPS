@@ -87,6 +87,7 @@ import app.aaps.core.ui.compose.CarbTimeRow
 import app.aaps.core.ui.compose.ExpandableRowHeader
 import app.aaps.core.ui.compose.NumberInputRow
 import app.aaps.core.ui.compose.QuickAddButtons
+import app.aaps.core.ui.compose.StepButtons
 import app.aaps.core.ui.compose.bottomBarSafeArea
 import app.aaps.core.ui.compose.clearFocusOnTap
 import app.aaps.core.ui.compose.consumeOverscroll
@@ -720,17 +721,58 @@ internal fun WizardDialogContent(
                         }
                     }
 
-                    // Direct Correction input
-                    NumberInputRow(
-                        labelRef = CoreUiStrings.wizard_correction,
-                        value = uiState.directCorrection,
-                        onValueChange = onDirectCorrectionChange,
-                        valueRange = -uiState.maxBolus..uiState.maxBolus,
-                        step = uiState.bolusStep,
-                        unitLabel = CoreUiStrings.insulin_unit_shortname,
-                        decimalPlaces = 2,
-                        modifier = itemModifier
-                    )
+                    // Direct Correction (collapsible). The open text field looked like the carbs
+                    // field right above it, and users typed grams into it and bolused that many
+                    // units. Collapsed it keeps the +/- buttons, so a small adjustment needs no
+                    // keyboard; typing a value needs "Change" first.
+                    var correctionExpanded by rememberSaveable { mutableStateOf(false) }
+                    val correctionExpandRequester = rememberBringIntoViewOnExpand(correctionExpanded)
+                    val correctionLabel = stringResource(CoreUiStrings.wizard_correction)
+                    val correctionRange = -uiState.maxBolus..uiState.maxBolus
+                    Column(modifier = itemModifier.bringIntoViewRequester(correctionExpandRequester)) {
+                        ExpandableRowHeader(
+                            label = correctionLabel,
+                            expanded = correctionExpanded,
+                            onExpand = { correctionExpanded = true },
+                            trailingContent = {
+                                StepButtons(
+                                    label = correctionLabel,
+                                    value = uiState.directCorrection,
+                                    onValueChange = onDirectCorrectionChange,
+                                    valueRange = correctionRange,
+                                    step = uiState.bolusStep,
+                                    unitLabel = CoreUiStrings.insulin_unit_shortname,
+                                    decimalPlaces = 2
+                                )
+                            }
+                        ) {
+                            // While the field is open it shows the value itself; a copy here is noise.
+                            if (!correctionExpanded) {
+                                val hasCorrection = uiState.directCorrection != 0.0
+                                Text(
+                                    text = if (hasCorrection) stringResource(CoreUiStrings.format_insulin_units_signed, uiState.directCorrection)
+                                    else stringResource(InterfacesStrings.format_insulin_units, 0.0),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (hasCorrection) ElementType.INSULIN.color() else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        AnimatedVisibility(
+                            visible = correctionExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            NumberInputRow(
+                                labelRef = CoreUiStrings.wizard_correction,
+                                value = uiState.directCorrection,
+                                onValueChange = onDirectCorrectionChange,
+                                valueRange = correctionRange,
+                                step = uiState.bolusStep,
+                                unitLabel = CoreUiStrings.insulin_unit_shortname,
+                                decimalPlaces = 2
+                            )
+                        }
+                    }
 
                     // Carb Time (compact row with popup dialog)
                     CarbTimeRow(
