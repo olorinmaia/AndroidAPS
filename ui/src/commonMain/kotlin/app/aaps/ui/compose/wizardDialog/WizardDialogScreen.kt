@@ -746,7 +746,6 @@ internal fun WizardDialogContent(
                         }
                     }
 
-                    var correctionExpanded by rememberSaveable { mutableStateOf(false) }
                     // Direct Correction: collapsed, so there is no second open field under the carbs
                     // one. They looked alike, and grams typed into this one were bolused as units
                     // (reported on Discord). Nudging still works from the collapsed row; the pencil
@@ -759,8 +758,7 @@ internal fun WizardDialogContent(
                         step = uiState.bolusStep,
                         unitLabel = CoreUiStrings.insulin_unit_shortname,
                         decimalPlaces = 2,
-                        expanded = correctionExpanded,
-                        onExpandedChange = { correctionExpanded = it },
+                        showExpandButton = false,
                         modifier = itemModifier,
                         // More than the number: the IOB after the whole dose, so a correction
                         // can be chosen with the end result in view. Personal build only.
@@ -784,9 +782,8 @@ internal fun WizardDialogContent(
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    // Closed: always on its own line under the value, so the row is two lines, never
-                                    // three. Open: the +/- are gone, so there is room for one line.
-                                    modifier = if (correctionExpanded) Modifier else Modifier.fillMaxWidth()
+                                    // Always on its own line under the value, so the row is two lines, never three.
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
@@ -799,6 +796,7 @@ internal fun WizardDialogContent(
                         onOffsetChange = { onCarbTimeChange(it.toDouble()) },
                         alarmChecked = uiState.alarmChecked,
                         onAlarmChange = onAlarmToggle,
+                        showExpandButton = false,
                         modifier = itemModifier
                     )
                     // BG (collapsible, auto-expand when old/missing)
@@ -811,6 +809,7 @@ internal fun WizardDialogContent(
                         step = uiState.bgStep,
                         unitLabel = TextRef.Literal(unitsLabel),
                         decimalPlaces = if (uiState.isMgdl) 0 else 1,
+                        showExpandButton = false,
                         expanded = bgExpanded,
                         onExpandedChange = {
                             bgExpanded = it
@@ -857,6 +856,7 @@ internal fun WizardDialogContent(
                         step = 5.0,
                         unitLabel = TextRef.Literal("%"),
                         decimalPlaces = 0,
+                        showExpandButton = false,
                         expanded = percentageExpanded,
                         onExpandedChange = { percentageExpanded = it },
                         modifier = itemModifier.bringIntoViewRequester(percentageExpandRequester),

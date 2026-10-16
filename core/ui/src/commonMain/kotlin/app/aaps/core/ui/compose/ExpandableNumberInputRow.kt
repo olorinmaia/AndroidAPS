@@ -6,7 +6,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRowScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -45,6 +44,9 @@ import app.aaps.core.ui.CoreUiStrings
  * Expansion is remembered internally. Pass [expanded] and [onExpandedChange] when something else
  * has to open the row, for example a reading that is too old to trust.
  *
+ * @param showExpandButton false hides the chevron, so the row is stepped with +/- only and never
+ *   opened by the user. The caller can still open it through [expanded], for example when there is
+ *   no reading to step from. Personal build: no typed input on the secondary rows.
  * @param inputLabelRef label of the open field, when it is not the one in the header. Carb time
  *   heads the row "Carb time" and labels the field inside it "Time".
  * @param valueContent what the collapsed row shows after the label. The default is the value
@@ -68,6 +70,7 @@ fun ExpandableNumberInputRow(
     inputLabelRef: TextRef = labelRef,
     expanded: Boolean? = null,
     onExpandedChange: ((Boolean) -> Unit)? = null,
+    showExpandButton: Boolean = true,
     valueContent: (@Composable FlowRowScope.() -> Unit)? = null,
     expandedContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
@@ -98,37 +101,31 @@ fun ExpandableNumberInputRow(
             expanded = isExpanded,
             onExpand = { setExpanded(true) },
             actions = {
-                // One group with no spacing of its own: the 48 dp touch targets already leave 8 dp
-                // of visible air between the 40 dp buttons, the same as the open field. The 8 dp
-                // the outer row would add between each of the three made "Correction: -0.50 U"
-                // wrap on a narrow phone.
-                Row {
-                    // Only while closed: the open field brings its own +/-, and two pairs on one row
-                    // would be a puzzle.
-                    if (!isExpanded) {
-                        // No field to read here, so stepping is simply from the value we were given.
-                        StepButtons(
-                            decreaseDescription = decreaseDescription,
-                            increaseDescription = increaseDescription,
-                            canDecrease = enabled && value > valueRange.start,
-                            canIncrease = enabled && value < valueRange.endInclusive,
-                            onStep = { direction ->
-                                onValueChange(roundToStep(value + direction * step, step).coerceIn(valueRange))
-                            }
+                // Only while closed: the open field brings its own +/-, and two pairs on one row
+                // would be a puzzle.
+                if (!isExpanded) {
+                    // No field to read here, so stepping is simply from the value we were given.
+                    StepButtons(
+                        decreaseDescription = decreaseDescription,
+                        increaseDescription = increaseDescription,
+                        canDecrease = enabled && value > valueRange.start,
+                        canIncrease = enabled && value < valueRange.endInclusive,
+                        onStep = { direction ->
+                            onValueChange(roundToStep(value + direction * step, step).coerceIn(valueRange))
+                        }
+                    )
+                }
+                if (showExpandButton) IconButton(onClick = { setExpanded(!isExpanded) }, enabled = enabled) {
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        // Named, not a bare "Expand": a screen reader meets several of these on one
+                        // screen, and the +/- beside them already say which field they belong to.
+                        contentDescription = stringResource(
+                            if (isExpanded) CoreUiStrings.a11y_collapse_button_description
+                            else CoreUiStrings.a11y_expand_button_description,
+                            label
                         )
-                    }
-                    IconButton(onClick = { setExpanded(!isExpanded) }, enabled = enabled) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                            // Named, not a bare "Expand": a screen reader meets several of these on one
-                            // screen, and the +/- beside them already say which field they belong to.
-                            contentDescription = stringResource(
-                                if (isExpanded) CoreUiStrings.a11y_collapse_button_description
-                                else CoreUiStrings.a11y_expand_button_description,
-                                label
-                            )
-                        )
-                    }
+                    )
                 }
             }
         ) {

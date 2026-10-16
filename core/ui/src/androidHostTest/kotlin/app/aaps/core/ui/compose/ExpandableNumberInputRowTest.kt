@@ -60,6 +60,7 @@ class ExpandableNumberInputRowTest {
         value: Double = 10.0,
         valueRange: ClosedFloatingPointRange<Double> = 0.0..100.0,
         onValueChange: (Double) -> Unit = {},
+        showExpandButton: Boolean = true,
         expandedContent: (@Composable ColumnScope.() -> Unit)? = null
     ) {
         compose.setContent {
@@ -71,6 +72,7 @@ class ExpandableNumberInputRowTest {
                     valueRange = valueRange,
                     step = 5.0,
                     unitLabel = TextRef.Literal(UNIT),
+                    showExpandButton = showExpandButton,
                     expandedContent = expandedContent
                 )
             }
@@ -135,6 +137,18 @@ class ExpandableNumberInputRowTest {
         compose.onNodeWithText(EXTRA).assertDoesNotExist()
         compose.onNodeWithContentDescription(expandButton).performClick()
         compose.onNodeWithText(EXTRA).assertIsDisplayed()
+    }
+
+    /** Personal build: a row without the chevron can only be stepped, never opened. */
+    @Test
+    fun withoutTheChevronTheRowStepsButNeverOpens() {
+        var changed: Double? = null
+        setRow(value = 10.0, onValueChange = { changed = it }, showExpandButton = false)
+
+        compose.onNodeWithContentDescription(expandButton).assertDoesNotExist()
+        compose.onNodeWithContentDescription(plusButton).performClick()
+
+        assertThat(changed).isEqualTo(15.0)
     }
 
     private companion object {

@@ -40,6 +40,8 @@ import app.aaps.core.ui.CoreUiStrings
  * @param resolvedTimeText Formatted time string (e.g., "17:55") when offset != 0
  * @param offsetRange Allowed range for the offset
  * @param offsetStep Step for the +/- buttons
+ * @param showExpandButton false hides the chevron. The alarm switch then sits under the value while
+ *   the offset is positive, because the open part is out of reach. Personal build.
  * @param dateTimeContent Optional composable for date/time pickers
  * @param modifier Modifier for the root column
  */
@@ -53,6 +55,7 @@ fun TimeOffsetRow(
     resolvedTimeText: String? = null,
     offsetRange: IntRange = -60..60,
     offsetStep: Int = 5,
+    showExpandButton: Boolean = true,
     dateTimeContent: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -68,6 +71,7 @@ fun TimeOffsetRow(
         valueRange = offsetRange.first.toDouble()..offsetRange.last.toDouble(),
         step = offsetStep.toDouble(),
         unitLabel = CoreUiStrings.units_min,
+        showExpandButton = showExpandButton,
         expanded = expanded,
         onExpandedChange = { expanded = it },
         modifier = modifier
@@ -96,13 +100,34 @@ fun TimeOffsetRow(
                     )
                 }
             }
-            if (onAlarmChange != null && alarmChecked && offsetMinutes != 0) {
+            if (showExpandButton && onAlarmChange != null && alarmChecked && offsetMinutes != 0) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
                     // The only sign that an alarm is set when the row is collapsed.
                     contentDescription = stringResource(CoreUiStrings.wizard_set_alarm),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
+                )
+            }
+            // Personal build: with no chevron the open part is out of reach, so the alarm switch
+            // sits under the value instead, only while it can do anything (a positive offset).
+            if (!showExpandButton && onAlarmChange != null && offsetMinutes > 0) {
+                LabeledSwitch(
+                    label = stringResource(CoreUiStrings.wizard_set_alarm),
+                    checked = alarmChecked,
+                    onCheckedChange = onAlarmChange,
+                    labelStyle = MaterialTheme.typography.bodyMedium,
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(20.dp)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
