@@ -101,6 +101,7 @@ import app.aaps.core.ui.compose.TimeOffsetRow
 import app.aaps.core.ui.compose.bottomBarSafeArea
 import app.aaps.core.ui.compose.clearFocusOnTap
 import app.aaps.core.ui.compose.consumeOverscroll
+import app.aaps.core.ui.compose.formatSliderDisplayValue
 import app.aaps.core.ui.compose.dialogs.ElementConfirmationDialog
 import app.aaps.core.ui.compose.icons.IcBread
 import app.aaps.core.ui.compose.icons.IcCake
@@ -745,6 +746,7 @@ internal fun WizardDialogContent(
                         }
                     }
 
+                    var correctionExpanded by rememberSaveable { mutableStateOf(false) }
                     // Direct Correction: collapsed, so there is no second open field under the carbs
                     // one. They looked alike, and grams typed into this one were bolused as units
                     // (reported on Discord). Nudging still works from the collapsed row; the pencil
@@ -757,7 +759,37 @@ internal fun WizardDialogContent(
                         step = uiState.bolusStep,
                         unitLabel = CoreUiStrings.insulin_unit_shortname,
                         decimalPlaces = 2,
-                        modifier = itemModifier
+                        expanded = correctionExpanded,
+                        onExpandedChange = { correctionExpanded = it },
+                        modifier = itemModifier,
+                        // More than the number: the IOB after the whole dose, so a correction
+                        // can be chosen with the end result in view. Personal build only.
+                        valueContent = {
+                            Text(
+                                text = formatSliderDisplayValue(
+                                    value = uiState.directCorrection,
+                                    unitLabel = CoreUiStrings.insulin_unit_shortname,
+                                    valueFormat = NumberFormat.DECIMAL_2
+                                ),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (uiState.hasResult && uiState.useIOB) {
+                                // totalIOB is stored negative, as the calculation card shows it (IOB -1.07 U).
+                                val newIob = uiState.totalInsulin - uiState.totalIOB
+                                Text(
+                                    text = stringResource(
+                                        CoreUiStrings.value_in_parentheses,
+                                        stringResource(CoreUiStrings.wizard_new_iob, stringResource(InterfacesStrings.format_insulin_units, newIob))
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    // Closed: always on its own line under the value, so the row is two lines, never
+                                    // three. Open: the +/- are gone, so there is room for one line.
+                                    modifier = if (correctionExpanded) Modifier else Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     )
 
                     // Carb Time (compact row with popup dialog)

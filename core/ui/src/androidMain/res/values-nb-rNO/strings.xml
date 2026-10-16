@@ -751,6 +751,7 @@
     <string name="carbs_type_cake">Dumplings, pasta, asiatisk mat rik på karbohydrater og fett, søt gjærbakst, frokostblandinger, grøt med korn, honning, syltetøy</string>
     <string name="carbs_type_pizza">Lasagne, pizza, hamburgere, pommes frites, bakte poteter, chips og lignende snacks</string>
     <string name="wizard_total">Total</string>
+    <string name="wizard_new_iob">Ny IOB: %1$s</string>
     <string name="wizard_carb_time">Karbotid</string>
     <string name="carb_time_now">Nå</string>
     <string name="change">Endre</string>

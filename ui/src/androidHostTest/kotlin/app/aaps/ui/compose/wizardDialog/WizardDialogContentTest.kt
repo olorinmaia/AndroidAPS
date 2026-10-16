@@ -59,6 +59,9 @@ class WizardDialogContentTest {
     /** Result extras for 71% and a +1 U correction, built from the same templates as the screen. */
     private lateinit var percentageAndCorrection: String
 
+    /** New IOB after a result with IOB 1.0 U (stored as -1.0, as the card shows it) and a dose of 0.72 U, built from the same templates as the screen. */
+    private lateinit var newIob: String
+
     @Before
     fun setUp() {
         // The app registers this at start. Without it every UiStrings text shows its key name.
@@ -84,6 +87,10 @@ class WizardDialogContentTest {
                 ctx.getString(CoreUiR.string.format_percent, 71),
                 ctx.getString(CoreUiR.string.format_insulin_units_signed, 1.0)
             )
+        )
+        newIob = ctx.getString(
+            CoreUiR.string.value_in_parentheses,
+            ctx.getString(CoreUiR.string.wizard_new_iob, ctx.getString(InterfacesR.string.format_insulin_units, 1.72))
         )
     }
 
@@ -127,6 +134,20 @@ class WizardDialogContentTest {
     fun resultShowsPercentageAndCorrectionInOneText() {
         setWizard(uiState = { loaded().copy(hasResult = true, totalInsulin = 2.0, percentage = 71, directCorrection = 1.0) })
         compose.onNodeWithText(percentageAndCorrection).assertIsDisplayed()
+    }
+
+    /** The Correction row says what the IOB will be after the whole dose: current IOB plus the total. */
+    @Test
+    fun correctionRowShowsTheNewIob() {
+        setWizard(uiState = { loaded().copy(hasResult = true, totalIOB = -1.0, totalInsulin = 0.72) })
+        compose.onNodeWithText(newIob).performScrollTo().assertIsDisplayed()
+    }
+
+    /** Without IOB in the calculation the number would be wrong, so it is not shown. */
+    @Test
+    fun correctionRowHidesTheNewIobWhenIobIsNotIncluded() {
+        setWizard(uiState = { loaded().copy(hasResult = true, useIOB = false, totalIOB = -1.0, totalInsulin = 0.72) })
+        compose.onNodeWithText(newIob).assertDoesNotExist()
     }
 
     /** A tap on the profile row opens the list straight away, and one tap on a name picks it. Before, the list needed a tap more. */

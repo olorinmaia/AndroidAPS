@@ -779,6 +779,7 @@
     <string name="carbs_type_cake">Dumplings, pasta, Asian cuisine rich in carbs and fats, sweet and yeast pastries, cereals, grain porridge, honey, jam</string>
     <string name="carbs_type_pizza">Lasagna, pizza, hamburgers, fries, baked potatoes, chips and similar snacks</string>
     <string name="wizard_total">Total</string>
+    <string name="wizard_new_iob" comment="IOB after the whole wizard dose is given. %1$s = insulin with unit. Example: New IOB: 1.72 U">New IOB: %1$s</string>
     <string name="wizard_carb_time">Carb time</string>
     <string name="carb_time_now">Now</string>
     <string name="change">Change</string>
