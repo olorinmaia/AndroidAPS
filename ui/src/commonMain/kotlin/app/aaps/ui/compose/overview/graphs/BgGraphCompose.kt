@@ -32,6 +32,7 @@ import app.aaps.core.interfaces.overview.graph.SeriesType
 import app.aaps.core.interfaces.overview.graph.TargetLineData
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
+import app.aaps.core.ui.compose.LocalProfileUtil
 import app.aaps.core.ui.compose.icons.IcBgCheck
 import app.aaps.core.ui.compose.icons.IcProfile
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -162,6 +163,8 @@ fun BgGraphCompose(
     val showPredictions = SeriesType.PREDICTIONS in bgOverlays
     val rawPredictions by viewModel.predictionsFlow.collectAsStateWithLifecycle()
     val predictions = if (showPredictions) rawPredictions else emptyList()
+    val profileUtil = LocalProfileUtil.current
+    val predictionHeadroom = remember(profileUtil.units) { profileUtil.fromMgdlToUnits(PREDICTION_AXIS_HEADROOM_MGDL) }
     val rawBasalData by viewModel.basalGraphFlow.collectAsStateWithLifecycle()
     val targetData by viewModel.targetLineFlow.collectAsStateWithLifecycle()
     val treatmentData by viewModel.treatmentGraphFlow.collectAsStateWithLifecycle()
@@ -410,7 +413,7 @@ fun BgGraphCompose(
     // Single LaunchedEffect for all data - ensures atomic updates
     LaunchedEffect(
         bgReadings, bucketedData, predictionsByType, basalData, targetData, epsPoints, activityData, showActivity, chartConfig, stableTimeRange,
-        visibleTimeRange, treatmentData
+        visibleTimeRange, treatmentData, predictionHeadroom
     ) {
         seriesRegistry[SERIES_REGULAR] = bgReadings
         seriesRegistry[SERIES_BUCKETED] = bucketedData
@@ -442,12 +445,16 @@ fun BgGraphCompose(
         // well off the curve, so it widens the axis like a reading — otherwise it would be clamped
         // to the edge and lie about what the meter said.
         val measuredPoints = measuredGlucosePoints(treatmentData.calibrations, treatmentData.therapyEvents)
-        val allBgAndPredictionValues = (bgReadings + bucketedData + predictions).map { it.value } + measuredPoints.map { it.second }
-        val windowedValues = (bgReadings + bucketedData + predictions).filter { inWindow(it.timestamp) }.map { it.value } +
-            measuredPoints.filter { inWindow(it.first) }.map { it.second }
-        val windowedOrFull = windowedValues.ifEmpty { allBgAndPredictionValues }
-        val dataMax = maxOf(windowedOrFull.maxOrNull() ?: chartConfig.highMark, chartConfig.highMark)
-        val dataMin = minOf(windowedOrFull.minOrNull() ?: chartConfig.lowMark, chartConfig.lowMark)
+        // Real values and predicted ones apart: a prediction may pull the top of the axis only so
+        // far above the real data, see bgAxisTop. The window fallback is decided for both together.
+        val realPoints = (bgReadings + bucketedData).map { it.timestamp to it.value } + measuredPoints
+        val predictionPoints = predictions.map { it.timestamp to it.value }
+        val windowHasData = (realPoints + predictionPoints).any { inWindow(it.first) }
+        fun List<Pair<Long, Double>>.axisValues() = if (windowHasData) filter { inWindow(it.first) }.map { it.second } else map { it.second }
+        val realValues = realPoints.axisValues()
+        val predictionValues = predictionPoints.axisValues()
+        val dataMax = bgAxisTop(realValues.maxOrNull(), predictionValues.maxOrNull(), chartConfig.highMark, predictionHeadroom)
+        val dataMin = minOf(realValues.minOrNull() ?: chartConfig.lowMark, predictionValues.minOrNull() ?: chartConfig.lowMark, chartConfig.lowMark)
         val niceBgScale = niceScale(dataMin, dataMax)
         startAxisRangeProvider.maxX = maxX
         startAxisRangeProvider.minY = niceBgScale.min
